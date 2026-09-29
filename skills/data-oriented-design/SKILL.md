@@ -22,6 +22,7 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 | Parent rows each own a child array | One child array; each parent stores `(offset, length)` | DOD-007 |
 | Long-lived pointers to movable or reused rows | One row owner; checked typed IDs outside it | DOD-005 |
 | Rows own duplicate variable-length strings | One byte pool; rows store `(offset, length)` IDs | DOD-022 |
+| Each row stores multiple independent boolean fields | One explicitly defined bit mask, if the aligned row shrinks | DOD-023 |
 | Optional payload reserved in every row | Core rows plus present-only side storage | DOD-015 |
 | Repeated `N × M` scan or key search | Grouped rows or an index, including maintenance cost | DOD-003, DOD-021 |
 
@@ -104,6 +105,12 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 - **Action:** Inspect field offsets. Reorder private fields or derive a flag when another field determines it. Change one layout property per comparison.
 - **Check:** Report old/new row bytes and `row count × row bytes`. Preserve externally fixed serialized or binary layouts. Where the runtime does not expose field offsets, measure retained allocation instead.
 - **Example:** With 8 B alignment, `[bool, 8 B ID, 4 B count, 2 B tag, bool]` can occupy 24 B; reordering the same fields can occupy 16 B. Verify both sizes in the target build.
+
+### DOD-023 — Pack independent row flags
+- **Symptom:** Each of `N` rows stores separate boolean fields that are read or serialized as a group.
+- **Action:** Assign a fixed bit position to each flag and store one integer mask. Replace field reads/writes with named bit tests and updates. Use this layout only when the aligned row shrinks or grouped flag access meets a stated budget.
+- **Check:** Verify each flag combination, default value, and serialized meaning. Compare actual row bytes and flag-read/update time. If multiple threads update different flags in one mask, account for synchronization and contention.
+- **Example:** In a runtime with 1 B booleans, eight flags occupy 8 B before padding; one 8-bit mask occupies 1 B before padding. An `N=10,000` row array saves up to `70 KB` in raw flag bytes, but may save `0 B` after row alignment; measure the final row size.
 
 ### DOD-015 — Move optional payloads out of every row
 - **Symptom:** Every row reserves `B` bytes for an optional payload, but only `P` of `N` rows contain one.
