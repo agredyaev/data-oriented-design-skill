@@ -22,7 +22,7 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 | AoS row repeats alignment padding `N` times | Separate columns by alignment when reordering cannot remove padding | DOD-014, DOD-006 |
 | Parent rows each own a child array | One child array; each parent stores `(offset, length)` | DOD-007 |
 | Long-lived pointers to movable or reused rows | One row owner; checked typed IDs outside it | DOD-005 |
-| Rows own duplicate variable-length strings | One byte pool; rows store `(offset, length)` IDs | DOD-022 |
+| Rows or indexes retain string keys | Intern bytes once; store bounded integer `StringId` keys and one byte pool | DOD-022 |
 | Build resolves names, but runtime rows still store string links | Resolve once to typed row IDs; keep names only for required output | DOD-008 |
 | Every row stores line, column, or a value derivable from retained input | Keep source plus compact start/kind; derive the other value on demand | DOD-017 |
 | A pass reads only `row.flag`, but rows cannot be partitioned | Parallel `flags[i]` column; test a bitset if only tests are needed | DOD-006 |
@@ -88,11 +88,11 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 - **Check:** Preserve unknown-name errors and the existing duplicate-name policy. Preserve canonical output order and name spelling. Compare build lookups, retained bytes, and runtime traversal; include the name table and any retained map in the byte count.
 - **Example:** `before: edge.target = "cat"; visit(edge) => map[edge.target]`. `after: edge.target = EntityId(7); visit(edge) => owner.resolve(edge.target)`. Keep `names[7] = "cat"` only if output needs it. The ID stays stable if the physical row moves. For `E` edges visited `Q` times, name lookup moves from each of `Q × E` visits to the build of `E` edges.
 
-### DOD-022 — Pool retained strings behind offsets
-- **Symptom:** Each of `N` rows separately allocates a name or keeps a long-lived slice into a buffer that may grow; repeated names are copied again.
-- **Action:** Intern each distinct byte string into one owned byte array. Store a checked `(offset, length)` ID in rows; compare incoming bytes against pooled bytes in a build-time lookup table. Resolve a temporary slice only when needed. Drop the table after build if runtime neither inserts names nor looks them up.
-- **Check:** Duplicate bytes receive the same ID; unequal bytes stay distinct even on hash collisions. Check offset/length overflow, encoding and equality policy, and lifetime across pool growth. Compare pool, IDs, lookup-table bytes, allocations, and lookup cost with the original.
-- **Example:** `before: rows[i].name = separately_allocated_string`; `after: rows[i].name = StringId(offset, length); names = concatenated_unique_bytes`. Two rows named `cat` share one `(offset, 3)` ID. Pool relocation changes addresses but not offsets.
+### DOD-022 — Replace retained string keys with integer IDs
+- **Symptom:** Rows or indexes retain owned or borrowed string keys, and internal operations repeatedly hash or compare their bytes.
+- **Action:** Store each distinct string once in an owned byte pool with its length. Intern incoming bytes to a typed unsigned `StringId` containing the pool offset. Use that ID in rows or as the key of internal maps, wherever string keys were retained; resolve a temporary byte view only when text content is needed. Keep the string-to-ID table while new strings or external string lookups are accepted.
+- **Check:** Strings equivalent under the declared equality policy receive one ID; non-equivalent strings remain distinct despite hash collisions. Validate offset width, length encoding, and pool lifetime; keep offsets stable or remap IDs if the pool is compacted. Count pool bytes, IDs, retained lookup tables and maps, and allocations; compare build and runtime lookup costs. Persist the pool alongside IDs or remap IDs on load. Pool offsets are not dense ordinals: compact direct arrays require a separate dense ID mapping.
+- **Example:** `before: string_key_map["cat"] = value; row.name = owned_string("cat")`. `after: id = intern("cat"); integer_key_map[id] = value; row.name = id`. If the pool entry for `cat` starts at byte offset 37, repeated uses of `cat` share `StringId(37)`; `integer_key_map` uses integer keys rather than string bytes. A 32-bit offset is valid only while pool size and reserved values fit its declared range.
 
 ### DOD-009 — Narrow fields only with enforced bounds
 - **Symptom:** A retained row uses a wider integer than its declared maximum requires.
