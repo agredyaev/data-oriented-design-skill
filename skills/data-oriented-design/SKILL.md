@@ -1,6 +1,6 @@
 ---
 name: data-oriented-design
-description: Recognize data layout problems in code, propose concrete AoS/SoA, flat-array, and handle-based redesigns, then check time, space, and behavior across languages.
+description: Use when reviewing memory or runtime costs of retained collections in code. Propose concrete AoS/SoA, flat-array, cache, and ID-based redesigns; check time, space, and behavior across languages.
 ---
 
 # Data-Oriented Design
@@ -87,9 +87,9 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 
 ### DOD-008 — Resolve external strings to internal IDs at build time
 - **Symptom:** Relations retain names and each runtime traversal searches a string-key map for the target row.
-- **Action:** Validate names and duplicates once during build, assign typed dense IDs, and store IDs in relations. Keep a name table only when output or diagnostics require names. Drop the builder map after the final string lookup; keep it if runtime accepts names or inserts rows.
-- **Check:** Preserve unknown-name errors and the existing duplicate-name policy. Preserve canonical output order and name spelling. Compare build lookups, retained bytes, and runtime traversal; include the name table and any retained map in the byte count.
-- **Example:** `before: edge.target = "cat"; visit(edge) => map[edge.target]`. `after: edge.target = EntityId(7); visit(edge) => owner.resolve(edge.target)`. Keep `names[7] = "cat"` only if output needs it. The ID stays stable if the physical row moves. For `E` edges visited `Q` times, name lookup moves from each of `Q × E` visits to the build of `E` edges.
+- **Action:** Validate names and duplicates at build time. Assign typed dense IDs and store them in relations. Keep names for output or diagnostics. Retain the string lookup only for runtime name queries or inserts. If rows move, update an ID-to-slot map or remap stored IDs.
+- **Check:** Preserve unknown-name errors, duplicate-name policy, output order, and spelling. Count build lookups, retained bytes, and runtime traversal, including name and ID-to-slot maps.
+- **Example:** `before: edge.target = "cat"; visit(edge) => map[edge.target]`. `after: edge.target = EntityId(7); visit(edge) => owner.resolve(edge.target)`. Retain `names[7] = "cat"` only for output. An ID-to-slot map keeps `EntityId(7)` stable as rows move. For `E` edges visited `Q` times, resolve names once per edge during build instead of `Q × E` runtime lookups.
 
 ### DOD-022 — Replace retained string keys with integer IDs
 - **Symptom:** Rows or indexes retain owned or borrowed string keys, and internal operations repeatedly hash or compare their bytes.
@@ -131,7 +131,7 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 - **Symptom:** A base object points to separately allocated subclass payloads, or a tagged union makes every row pay for its largest variant.
 - **Action:** Count each variant. Put common fields in parallel columns. Let a tag encode both variant and mutually exclusive flags; reuse an `extra_index` field according to the tag. Put variant-only payloads in dense side arrays. If side rows can be removed by swapping, store each side row's owner ID so the moved row's `extra_index` can be updated. Define a decode path for every tag before removing the old objects.
 - **Check:** Compute `Σ(column capacity × element width) + Σ(side-array capacity × element width) + lookup bytes`, including alignment. Test every tag, side index, transition, invalid encoding, output order, and serialization. Compare full traversal and decode time with the old objects.
-- **Example:** On a hypothetical 8 B-aligned runtime, `Actor {kind:1 B, x:4 B, y:4 B, extra_ptr:8 B}` occupies 24 B before subclass allocations. For 1,000,000 actors with 100,000 equipped, replace it with `tag[]:1 B` (`BASIC`, `EQUIPPED_IDLE`, `EQUIPPED_ARMED`), `x[]:4 B`, `y[]:4 B`, `extra_index[]:4 B`, and `equipped[]:{owner_id:4 B, item_id:4 B}` for equipped actors only. Raw elements total `1,000,000 × 13 B + 100,000 × 8 B = 13.8 MB` before capacity, versus at least `24 MB` of old base objects. The tag carries the armed flag; `extra_index[i]` names `equipped[]` only for equipped actors.
+- **Example:** On a hypothetical runtime with 8 B alignment, `Actor {kind:1 B, x:4 B, y:4 B, extra_ptr:8 B}` occupies 24 B before subclass allocations. For 1,000,000 actors, use common columns `tag[]:1 B`, `x[]:4 B`, `y[]:4 B`, and `extra_index[]:4 B`. Tags are `BASIC`, `EQUIPPED_IDLE`, and `EQUIPPED_ARMED`. Only the 100,000 equipped actors have entries in `equipped[]:{owner_id:4 B, item_id:4 B}`. Raw elements total `1,000,000 × 13 B + 100,000 × 8 B = 13.8 MB` before capacity, versus at least `24 MB` of old base objects. The tag carries the armed flag; `extra_index[i]` names `equipped[]` only for equipped actors.
 
 ### DOD-017 — Derive fields from retained input at use time
 - **Symptom:** Each of `N` rows stores `end`, `line`, `column`, or another value determined by retained `start`, `kind`, and source data.
