@@ -31,6 +31,7 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 | Optional payload reserved in every row | Core rows plus present-only side storage | DOD-015 |
 | Repeated loop skips inactive rows before work | Active row partition, or active IDs when rows cannot move | DOD-020 |
 | Repeated `N × M` scan or key search | Grouped rows or an index, including maintenance cost | DOD-003, DOD-021 |
+| Repeated queries recompute the same result | Cached result or incrementally maintained aggregate, including update cost | DOD-003, DOD-010 |
 
 ## Diagnose the work
 
@@ -51,10 +52,12 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
   - **Decision:** `FINDING`: the current `64 MB` raw rows exceed the `48 MB` budget. The side-array proposal is `UNVERIFIED` until actual retained bytes meet `48 MB`, lookup/update latency meets its budget, and behavior stays equivalent. Splitting one scanned `8 B` field (DOD-006) changes scan access but leaves the `64 MB` raw field total unchanged, so it cannot solve this memory budget by itself.
 
 ### DOD-003 — Calculate time and space complexity
-- **Symptom:** A pass scans `N × M` pairs or sorts `N` rows on every query.
+- **Symptom:** A pass scans `N × M` pairs, sorts `N` rows, or recomputes the same result on every query.
 - **Action:** Name input sizes and call counts. Derive build, query, update, output, and peak extra-space costs separately. Include `K` when producing `K` results. Distinguish expected from worst-case lookup when they differ. If projected calls exceed a stated budget, change the algorithm before tuning field layout.
-- **Check:** Include index construction and maintenance in the proposed complexity.
+- **Check:** Include index construction, cache build, invalidation, and update work in the proposed complexity.
 - **Example:** `Q` exact-key scans of `N` rows cost `O(QN)` time and `O(1)` extra space. Sort a separate `(key, row_id)` index in worst-case `O(N log N)` time, then use binary search for `O(log N)` per query while canonical rows keep their order. The index needs `O(N)` space; sorted insertion costs `O(N)` per update. Producing `K` rows adds `Ω(K)` work.
+  - **Cached result:** `Q` reachability checks from one root in a fixed graph of `N` nodes and `E` edges cost `O(Q(N+E))` if each check traverses the graph. Build `reachable[id]` once in `O(N+E)` time and `O(N)` space; then each membership check is `O(1)`, for `O(N+E+Q)` total time. Invalidate on graph mutation. If `R` graph versions receive queries, rebuilding costs `O(R(N+E)+Q)`; when `R≈Q`, caching does not improve asymptotic time.
+  - **Incremental result:** `Q` reads of the sum of `N` fixed-width integers cost `O(QN)` if each read scans all rows. Store one total: build `O(N)`, adjust it from old/new values in `O(1)` per mutation, and read it in `O(1)`. Aggregate work becomes `O(N+U+Q)` with `O(1)` extra space, excluding row mutation costs. Prove the total cannot overflow and route every mutation through the update.
 
 ### DOD-004 — Leave paths within budget unchanged
 - **Symptom:** A review proposes an index or cache for a collection whose access count and size already fit the stated budget.
