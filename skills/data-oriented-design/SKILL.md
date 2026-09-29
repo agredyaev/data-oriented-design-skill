@@ -1,13 +1,29 @@
 ---
 name: data-oriented-design
-description: Review runtime collections that exceed memory or latency budgets, and repeated passes whose cost is under investigation. Compare asymptotic time, retained bytes, and access patterns against the workload.
+description: Redesign the retained row type with the highest live count or a pass selected by profile or budget. Produce old/new layout, time and space costs, and validation across languages.
 ---
 
 # Data-Oriented Design
 
-Use this skill for a memory or latency budget breach, or a pass identified by profiling. A map, pointer, object, or branch alone is not a finding.
+A map, pointer, object, or branch alone is not a finding.
 
 **Build** creates or updates retained data. **Query** reads it. **Canonical** data defines identity and output order. `N` is rows, `M` another input count, `Q` queries, `U` updates, and `K` returned rows. Examples are hypothetical; derived counts are not benchmark results. Bytes use decimal units.
+
+## Run one layout experiment
+
+1. Follow a budget breach or profiled pass; otherwise start with the highest-count retained row type. Record live rows, row bytes, total bytes, and calls per workload. Without a budget or profile, label the experiment exploratory.
+2. Draw the current row and its consumers: field widths, padding, optional-field occupancy, fields read per pass, and update frequency. Choose one change from the rules below that reduces the observed bytes or repeated accesses.
+3. Show the proposed layout and calculate its total bytes plus build, query, and update cost. State the identity, order, error, and serialization behavior it must preserve. For an implementation, change one layout property per patch.
+4. If implementing, compare old and new behavior and costs on the same workload. Keep the change only if it meets the target budget without breaking another stated budget. In a review, name the measurements still required to accept the proposal.
+
+| Observed cost | First rule to test |
+| --- | --- |
+| Repeated `N × M` work or searches | DOD-003, DOD-021 |
+| Padding or redundant boolean per row | DOD-014, DOD-017 |
+| Heap object or pointer per row | DOD-005 |
+| Pass reads only some row fields | DOD-006 |
+| Optional payload in every row | DOD-015 |
+| Every variant pays for the largest one | DOD-016 |
 
 ## Diagnose the work
 
@@ -17,11 +33,15 @@ Use this skill for a memory or latency budget breach, or a pass identified by pr
 - **Check:** Each proposed deletion or reordering has a named consumer and output invariant.
 - **Example:** A name map resolves input references during build; queries use numeric IDs. Drop the map after build only if no runtime name lookup or diagnostic needs it.
 
-### DOD-002 — Choose the collection and pass to inspect
-- **Symptom:** A review proposes a layout change without identifying the collection or pass behind a measured cost.
-- **Action:** Measure retained bytes, or estimate `rows × row bytes + side storage + allocation overhead`. Rank collections by bytes and passes by measured total time. Inspect a budget breach first; otherwise inspect the top-ranked item. For memory, record live rows and row bytes. For latency, record calls, visited rows, and fields read. Choose the next rule from those facts.
-- **Check:** Report target, count, byte/time source, budget or rank, and next rule. Mark calculated bytes and new-system bounds as estimates. If neither budget nor profile exists, mark the target `UNVERIFIED`.
-- **Example:** Hypothetical: `1,000,000 × 64 B = 64 MB` before overhead, over a 48 MB row budget. If a repeated scan reads one 8 B field, test DOD-006 and measure latency before splitting.
+### DOD-002 — Turn the measured cost into a proposed layout
+- **Symptom:** A report calculates `rows × row bytes` or ranks passes, then stops without a representation change or a decision to keep the current one.
+- **Action:** Identify the bytes or repeated accesses behind the selected cost. Choose one matching rule below and draw the exact new layout or algorithm. Calculate old and proposed total bytes and build/query/update costs. If fields, occupancy, or measurements are missing, state which one blocks the decision.
+- **Check:** End with `old → proposed` representation, projected target cost, budget if stated, preserved behavior, and acceptance measurement. A byte count or rule ID alone does not complete this rule.
+- **Example:** Hypothetical memory case:
+  - **Before:** `1,000,000 × 64 B = 64 MB` of rows exceeds a `48 MB` retained-data budget. Each row contains `32 B` of core fields and a `32 B` optional payload present on `2%` of rows.
+  - **Change:** Keep `32 B` core rows. Put present payloads in a sorted side array of `8 B` ID + `32 B` payload per entry (DOD-015).
+  - **Projected cost:** `1,000,000 × 32 B + 20,000 × 40 B = 32.8 MB` of raw arrays before capacity and allocator overhead. For `P=20,000` present rows, a worst-case `O(P log P)` sort builds the side array. Binary search takes `O(log P)`. Sorted insertion takes `O(P)`; inline lookup took `O(1)`.
+  - **Decision:** `FINDING`: the current `64 MB` raw rows exceed the `48 MB` budget. The side-array proposal is `UNVERIFIED` until actual retained bytes meet `48 MB`, lookup/update latency meets its budget, and behavior stays equivalent. Splitting one scanned `8 B` field (DOD-006) changes scan access but removes none of the `64 B` per row, so it cannot solve this memory budget by itself.
 
 ### DOD-003 — Calculate time and space complexity
 - **Symptom:** A pass scans `N × M` pairs or sorts `N` rows on every query.
@@ -83,7 +103,7 @@ Use this skill for a memory or latency budget breach, or a pass identified by pr
 - **Symptom:** Every row reserves `B` bytes for an optional payload, but only `P` of `N` rows contain one.
 - **Action:** Compare `N × old row bytes` with `N × new row bytes + side-table bytes`, including alignment and capacity. Move present payloads to a side table only if the byte saving and measured lookup/update time meet the stated budgets.
 - **Check:** Measure `P/N`, total bytes, access latency, and insert/delete/move consistency. Keep the field inline if the side table breaches a budget.
-- **Example:** If 2% of `N` records carry a 32 B diagnostic, inline payload alone reserves `N × 32 B`. Compare it with side-table bytes plus the common row's marker, then measure diagnostic lookup time.
+- **Example:** In the worked case, 20,000 side entries replace 1,000,000 inline payload slots. Accept the side array only after checking its lookup and insertion costs.
 
 ### DOD-016 — Encode variants by observed frequency
 - **Symptom:** Every tagged row pays for its largest variant, or each variant lives in a separate heap object.
@@ -137,10 +157,10 @@ Use this skill for a memory or latency budget breach, or a pass identified by pr
 
 ### DOD-013 — Make each review finding actionable
 - **Symptom:** A review says “use SoA” or “optimize this” without a loop, scale, or proof.
-- **Action:** Report rule ID, code location and operation, symptom, input counts, current cost, proposed change and cost, preserved invariant, and evidence. Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A` for each considered rule. `UNVERIFIED` means that the proposed benefit lacks measurements or bounds needed to decide.
+- **Action:** Report rule ID, code location and operation, input counts, current layout/cost, proposed layout/cost, preserved invariant, and evidence. Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A` for each considered rule. `UNVERIFIED` means that the proposed benefit lacks measurements or bounds needed to decide.
 - **Check:** A reader can reproduce the calculation or measurement and decide whether to implement the change. Never invent profile percentages or latency.
 - **Example:** `Illustrative UNVERIFIED DOD-003/DOD-007: load loops over M=20,000 records for each of D=200 owners (4,000,000 comparisons; O(DM)). Two-pass grouping by checked dense owner ID costs O(D+M) time and extra space. Preserve per-owner order and duplicate errors. Matched load time and peak bytes: not measured.`
 
 ## Quality gate for this skill's output
 
-Apply IDs tied to inspected operations. `FINDING` requires measured cost or breached bound, a fix, invariant, and validation. `UNVERIFIED` requires missing profile, bytes, or call counts. Calculate build, query, update, and extra-space complexity. Never infer latency from Big O or row width. Rank findings by time or bytes over budget; list missing measurements.
+Apply IDs tied to inspected operations. `FINDING` names the current and proposed layout or algorithm, target cost, budget if stated, invariant, and acceptance measurement. `NO FINDING` means the inspected path meets its budget or has no demonstrated cost problem. If a candidate fails while the cost problem remains, report the unresolved breach and next candidate. `UNVERIFIED` names the missing field distribution, profile, byte count, or workload bound. Calculate build, query, update, and extra-space complexity. Never infer latency from Big O or row width.

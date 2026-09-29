@@ -1,6 +1,6 @@
 # Data-Oriented Design Skill
 
-21 language-independent rules for reviewing runtime data layout, time and space complexity, memory use, and measurement evidence.
+A language-independent guide for changing runtime data layout: select a row or pass, propose a concrete representation, calculate its costs, and verify it. Includes one worked example and 21 rules with stable IDs.
 
 Skill file: `skills/data-oriented-design/SKILL.md`.
 
