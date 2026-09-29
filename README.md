@@ -6,4 +6,4 @@ Skill file: `skills/data-oriented-design/SKILL.md`.
 
 To install in Codex, copy `skills/data-oriented-design` into `~/.codex/skills/`.
 
-Rule IDs `DOD-001` through `DOD-013` are stable for quality gates.
+Rule IDs `DOD-001` through `DOD-021` are stable for quality gates.
