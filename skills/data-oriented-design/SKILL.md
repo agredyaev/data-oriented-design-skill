@@ -19,11 +19,13 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 | Code signature | Candidate end state | Rule |
 | --- | --- | --- |
 | Loop over thousands of AoS rows reads only `row.key` | Dense `keys[i]`; other fields stay together as `payloads[i]` | DOD-006 |
+| AoS row repeats alignment padding `N` times | Separate columns by alignment when reordering cannot remove padding | DOD-014, DOD-006 |
 | Parent rows each own a child array | One child array; each parent stores `(offset, length)` | DOD-007 |
 | Long-lived pointers to movable or reused rows | One row owner; checked typed IDs outside it | DOD-005 |
 | Rows own duplicate variable-length strings | One byte pool; rows store `(offset, length)` IDs | DOD-022 |
 | Each row stores multiple independent boolean fields | One explicitly defined bit mask, if the aligned row shrinks | DOD-023 |
 | Optional payload reserved in every row | Core rows plus present-only side storage | DOD-015 |
+| Hot loop starts with `if not active: continue` | Active row partition, or active IDs when rows cannot move | DOD-020 |
 | Repeated `N × M` scan or key search | Grouped rows or an index, including maintenance cost | DOD-003, DOD-021 |
 
 ## Diagnose the work
@@ -59,16 +61,16 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 ## Shape retained data
 
 ### DOD-005 — Replace retained row pointers with checked IDs
-- **Symptom:** Code allocates each node separately, retains pointer links, and repeatedly traverses its nodes; deletion can leave stale links.
-- **Action:** Put rows in an owner array; store typed `(slot, generation)` handles in links. Keep slot numbers stable while handles exist. Resolve a handle through the owner at access time, checking domain, bounds, liveness, and generation. Keep direct references only while the owner cannot relocate or delete that row.
-- **Check:** A deleted slot reused for B must reject A's old handle; define generation-wrap behavior. Compare object allocation count, owner-array bytes, and lookup cost; an ID does not automatically save time.
-- **Example:** `before: next = pointer_to_node`; `after: next = NodeId(slot, generation); node = owner.resolve(next)`. One array owns 10,000 nodes; no node retains another node's address.
+- **Symptom:** Rows retain pointer links or use one heap allocation per node; link width and pointer traversal recur across `N` rows.
+- **Action:** Put rows in one owner array and store typed slot IDs in links. Choose a narrower ID only under a validated capacity bound (DOD-009). If deleted slots can be reused, add a generation; if rows are compacted, preserve or remap every live ID. Resolve IDs through the owner, and do not retain direct references across owner relocation.
+- **Check:** Compare actual row width, allocations, and traversal time. Reject wrong-domain, out-of-range, deleted, and stale IDs; define generation-wrap behavior if slots are reused.
+- **Example:** On a machine with 8 B pointers, `next: pointer` in 10,000 rows uses 80 KB of raw link fields. With at most `2^32-1` slots and no reuse, `next: checked 4 B NodeId` uses 40 KB before row padding. If slots are reused, `NodeId(slot, generation)` rejects a deleted node's old ID; recalculate its width.
 
-### DOD-006 — Split AoS only for a field-subset pass
-- **Symptom:** Code repeatedly loops over thousands of AoS rows but reads only one or two fields, or a search compares only `row.key` until it finds one row.
-- **Action:** Put fields read together into dense columns and keep other jointly used fields in payload rows. Access both by the same index; insert, delete, and reorder them together. Keep AoS when repeated passes consume whole rows.
-- **Check:** Compare the selected pass, whole-row consumers, and update/reorder cost. Order-preserving insertion can move O(N) elements in each column; swap removal changes order. The split retains all required field bytes, so claim no memory saving without a separate byte calculation.
-- **Example:** `before: rows[i] = {score: 8 B, payload: 56 B}` for 10,000 rows; a repeated `sum += rows[i].score` loop walks a 640 KB row region. `after: scores[i]: 8 B; payloads[i]: 56 B`; `sum += scores[i]` walks an 80 KB column; a full result reads `scores[i]` and `payloads[i]`. Raw field storage remains 640 KB before capacity/alignment. Both loops are O(N); speed is `UNVERIFIED`.
+### DOD-006 — Split AoS for field-subset passes or repeated padding
+- **Symptom:** A repeated loop over thousands of AoS rows reads one field, or each row carries alignment padding that field reordering cannot remove.
+- **Action:** Put fields read together into dense columns; keep fields consumed together in payload rows. Separate differently aligned fields when this removes per-row padding. Access columns by the same index and update them together. Keep AoS if full-row access dominates or the split breaches its update budget.
+- **Check:** Compare actual total bytes, the selected pass, full-row consumers, and insert/delete/reorder costs. Order-preserving insertion may move O(N) elements in every column; swap removal changes order. A scan split alone does not remove field bytes.
+- **Example:** For 10,000 rows of `{score: 8 B, payload: 56 B}`, a score loop walks a 640 KB row region. `scores[i]: 8 B` plus `payloads[i]: 56 B` makes the score loop walk an 80 KB column; raw fields still total 640 KB. A separate row `{link: 8 B, tag: 1 B}` can occupy 16 B with 8 B alignment: 160 KB for 10,000 rows. `links[]` plus `tags[]` uses 90 KB of raw elements before capacity. Both scan layouts remain O(N); time gains are `UNVERIFIED`.
 
 ### DOD-007 — Flatten stable relations
 - **Symptom:** Each parent owns a separately allocated child list and traversal is sequential.
@@ -102,7 +104,7 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 
 ### DOD-014 — Measure padding before packing
 - **Symptom:** A row in a retained collection measures wider than the sum of its fields because alignment inserts padding.
-- **Action:** Inspect field offsets. Reorder private fields or derive a flag when another field determines it. Change one layout property per comparison.
+- **Action:** Inspect field offsets. Reorder private fields or derive a flag when another field determines it. If padding still repeats per row, compare columns under DOD-006. Change one layout property per comparison.
 - **Check:** Report old/new row bytes and `row count × row bytes`. Preserve externally fixed serialized or binary layouts. Where the runtime does not expose field offsets, measure retained allocation instead.
 - **Example:** With 8 B alignment, `[bool, 8 B ID, 4 B count, 2 B tag, bool]` can occupy 24 B; reordering the same fields can occupy 16 B. Verify both sizes in the target build.
 
@@ -142,11 +144,11 @@ Code shape can justify a concrete redesign candidate before profiling. Object co
 - **Check:** Measure lookup count and the extra bytes/update work; verify companion arrays stay aligned after insert, delete, and reorder.
 - **Example:** Replace `N` string-key lookups per ranking pass with `N` indexed reads from a parallel weight array.
 
-### DOD-020 — Preselect work only when skips repay maintenance
-- **Symptom:** A repeated pass visits inactive rows and branches past them on every call.
-- **Action:** Build an active-ID list when `list build + updates + active scans < full scans` over the observed calls. Keep the full scan if the list costs more to maintain.
-- **Check:** Count skipped fraction, list rebuild/update work, and total pass latency; branch prediction alone is not proof.
-- **Example:** With 1,000,000 rows and 10,000 active IDs, compare a 1,000,000-row scan with a 10,000-ID scan plus list maintenance. The counts alone do not establish which is faster.
+### DOD-020 — Partition active rows when scans repay transitions
+- **Symptom:** A repeated loop starts with `if not active: continue` for most rows.
+- **Action:** Keep active and inactive rows in separate dense arrays; array membership encodes the flag, and the hot loop visits only active rows. When external references exist, maintain `ID → (partition, slot)`; if rows cannot move, keep active IDs instead. Choose the layout only when `partition build + state transitions + active scans < full scans` for the workload.
+- **Check:** Measure scanned rows, state-transition moves, total row bytes, and full-pass latency. Preserve stable IDs, output order, and concurrent update behavior. Swap removal moves O(1) rows but changes order; count ID-map maintenance separately. Order-preserving moves can cost O(N).
+- **Example:** With 1,000,000 rows and 10,000 active rows, the active partition visits 10,000 rows and needs no per-row active check. Each state transition moves a row and fixes its ID mapping. An active-ID list visits 10,000 IDs but then fetches their rows. Compare both against the 1,000,000-row scan; counts alone do not prove speed.
 
 ### DOD-021 — Price an index across its lifetime
 - **Symptom:** Exact or range queries repeatedly scan the same rows, while an index would add build and update work.
