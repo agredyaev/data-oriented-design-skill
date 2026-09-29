@@ -1,6 +1,6 @@
 # Data-Oriented Design Skill
 
-A self-contained, language-independent set of practical rules for reviewing runtime data layout, asymptotic complexity, memory use, and performance evidence.
+21 language-independent rules for reviewing runtime data layout, time and space complexity, memory use, and measurement evidence.
 
 Skill file: `skills/data-oriented-design/SKILL.md`.
 
