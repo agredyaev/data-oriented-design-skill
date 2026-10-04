@@ -945,7 +945,7 @@ Does growth cause reallocations or copied bytes in a hot build path?
 - **Example:** Input bytes → parse tree → canonical rows → score pass → ordered output. Once score and output use only rows plus the order index, release the parse tree.
 
 ### DOD-002 — Finish diagnosis with a target layout
-- **Symptom:** A review identifies `N` retained rows of `W` bytes each or a repeated loop, then stops without a representation change or a decision to keep the current one.
+- **Symptom:** A review finds a repeated loop or `N` retained rows of `W` bytes each. The review stops without a representation decision.
 - **Action:** Match the code signature to a rule below and draw the exact new layout or algorithm. Calculate old and proposed total bytes and build/query/update costs when inputs are known. Missing measurements prevent acceptance, not a specific candidate.
 - **Check:** End with `old → proposed` representation, projected target cost, budget if stated, preserved behavior, and acceptance measurement. A byte count or rule ID alone does not complete this rule.
 - **Example:** Hypothetical memory case:
@@ -977,7 +977,7 @@ Does growth cause reallocations or copied bytes in a hot build path?
 - **Example:** On a machine with 8 B pointers, `next: pointer` in 10,000 rows uses 80 KB of raw link fields. With at most `2^32-1` slots and no reuse, `next: checked 4 B NodeId` uses 40 KB before row padding. If slots are reused, `NodeId(slot, generation)` rejects a deleted node's old ID; recalculate its width.
 
 ### DOD-006 — Choose AoS, SoA, or AoSoA from the access pattern
-- **Symptom:** A repeated loop over `N` AoS rows reads one field, or each row carries alignment padding that field reordering cannot remove.
+- **Symptom:** A repeated loop over `N` AoS rows reads one field. Or each row carries padding that field reordering cannot remove.
 - **Action:** Keep AoS when full-row access dominates. Use SoA for sequential field-subset scans. Test AoSoA when pure SoA increases page or TLB pressure. Keep fields consumed together in one group. Update aligned columns together.
 - **Check:** Compare total bytes, hot-pass time, full-row time, page and TLB behavior, and update cost. Benchmark AoSoA chunk size. A scan split alone does not remove field bytes.
 - **Example:** For 10,000 rows of `{score: 8 B, payload: 56 B}`, a score loop walks a 640 KB row region. `scores[i]: 8 B` plus `payloads[i]: 56 B` makes that loop walk an 80 KB column; raw fields still total 640 KB. The same split works for a flag-only pass: `flags[i]` holds each boolean beside `payloads[i]`, while the pass reads only `flags[]`. If false rows dominate and rows may move, DOD-020 can encode the flag as active/inactive array membership. A separate row `{link: 8 B, tag: 1 B}` can occupy 16 B with 8 B alignment: 160 KB for 10,000 rows. `links[]` plus `tags[]` uses 90 KB of raw elements before capacity. The AoS and column-only scans remain O(N); an active partition under DOD-020 visits A active rows. Time gains are `UNVERIFIED`.
@@ -996,7 +996,7 @@ Does growth cause reallocations or copied bytes in a hot build path?
 
 ### DOD-022 — Replace retained string keys with integer IDs
 - **Symptom:** Rows or indexes retain owned or borrowed string keys, and internal operations repeatedly hash or compare their bytes.
-- **Action:** Store each distinct string once in an owned byte pool with its length. Intern incoming bytes to a typed unsigned `StringId` containing the pool offset. Use that ID in rows or as the key of internal maps, wherever string keys were retained; resolve a temporary byte view only when text content is needed. Keep the string-to-ID table while new strings or external string lookups are accepted.
+- **Action:** Store each distinct string once in an owned byte pool with its length. Intern incoming bytes to a typed unsigned `StringId` containing the pool offset. Use that ID in rows and internal maps. Resolve a temporary byte view only when text content is needed. Keep the string-to-ID table while new strings or external string lookups are accepted.
 - **Check:** Strings equivalent under the declared equality policy receive one ID; non-equivalent strings remain distinct despite hash collisions. Validate offset width, length encoding, and pool lifetime; keep offsets stable or remap IDs if the pool is compacted. Count pool bytes, IDs, retained lookup tables and maps, and allocations; compare build and runtime lookup costs. Persist the pool alongside IDs or remap IDs on load. Pool offsets are not dense ordinals: compact direct arrays require a separate dense ID mapping.
 - **Example:** `before: string_key_map["cat"] = value; row.name = owned_string("cat")`. `after: id = intern("cat"); integer_key_map[id] = value; row.name = id`. If the pool entry for `cat` starts at byte offset 37, repeated uses of `cat` share `StringId(37)`; `integer_key_map` uses integer keys rather than string bytes. A 32-bit offset is valid only while pool size and reserved values fit its declared range.
 
@@ -1008,7 +1008,7 @@ Does growth cause reallocations or copied bytes in a hot build path?
 
 ### DOD-010 — Keep passes and scratch local
 - **Symptom:** A pass allocates per row, writes shared mutable marks, or retains a cache for data used by one request.
-- **Action:** Reuse operation-local scratch sized to the maximum visited rows. Compute a derived value inside the request when it is used only there. Add a retained cache only if measured saved time covers its build and invalidation cost and its bytes fit the memory budget.
+- **Action:** Reuse operation-local scratch sized to the maximum visited rows. Compute a derived value inside the request when it is used only there. Add a retained cache only when measured savings exceed build and invalidation cost. Keep the cache within the memory budget.
 - **Check:** Count allocations per operation, scratch peak, concurrent behavior, and cache invalidation paths.
 - **Example:** A graph query uses a request-local visited array indexed by dense ID; no per-node allocation or shared lock is needed for the marks.
 
@@ -1026,13 +1026,13 @@ Does growth cause reallocations or copied bytes in a hot build path?
 
 ### DOD-015 — Move optional payloads out of every row
 - **Symptom:** Every row reserves `B` bytes for an optional payload, but only `P` of `N` rows contain one.
-- **Action:** Compare `N × old row bytes` with `N × new row bytes + side-table bytes`, including alignment and capacity. Move present payloads to a side table only if the byte saving and measured lookup/update time meet the stated budgets.
+- **Action:** Compare `N × old row bytes` with `N × new row bytes + side-table bytes`, including alignment and capacity. Move present payloads to a side table only when total bytes decrease. Require lookup and update time to meet their budgets.
 - **Check:** Measure `P/N`, total bytes, access latency, and insert/delete/move consistency. Reserve an absent index and check it before side-array access. Keep the field inline if the side table breaches a budget.
 - **Example:** `N=1,000` rows contain a 24 B core and a 16 B optional payload; `P=10` payloads are present. The old raw fields use `40 KB`. Replace them with `core[]:24 B × N`, `side_index[]:4 B × N`, and `side[]:{owner_id:4 B, payload:16 B} × P`: `24 KB + 4 KB + 0.2 KB = 28.2 KB` before capacity/alignment. Lookup uses one checked index, O(1); swap removal must repair the moved owner's side index.
 
 ### DOD-016 — Replace per-object variants with SoA encodings
-- **Symptom:** A base object points to separately allocated subclass payloads, or a tagged union makes every row pay for its largest variant.
-- **Action:** Count each variant. Put common fields in parallel columns. Let a tag encode both variant and mutually exclusive flags; reuse an `extra_index` field according to the tag. Put variant-only payloads in dense side arrays. If side rows can be removed by swapping, store each side row's owner ID so the moved row's `extra_index` can be updated. Define a decode path for every tag before removing the old objects.
+- **Symptom:** A base object points to a separate subclass payload. Or a tagged union makes every row pay for its largest variant.
+- **Action:** Count each variant. Put common fields in parallel columns. Let a tag encode both variant and mutually exclusive flags; reuse an `extra_index` field according to the tag. Put variant-only payloads in dense side arrays. If swap removal can move side rows, store each side row's owner ID. Update the moved owner's `extra_index`. Define a decode path for every tag before removing the old objects.
 - **Check:** Compute `Σ(column capacity × element width) + Σ(side-array capacity × element width) + lookup bytes`, including alignment. Test every tag, side index, transition, invalid encoding, output order, and serialization. Compare full traversal and decode time with the old objects.
 - **Example:** On a hypothetical runtime with 8 B alignment, `Actor {kind:1 B, x:4 B, y:4 B, extra_ptr:8 B}` occupies 24 B before subclass allocations. For 1,000,000 actors, use common columns `tag[]:1 B`, `x[]:4 B`, `y[]:4 B`, and `extra_index[]:4 B`. Tags are `BASIC`, `EQUIPPED_IDLE`, and `EQUIPPED_ARMED`. Only the 100,000 equipped actors have entries in `equipped[]:{owner_id:4 B, item_id:4 B}`. Raw elements total `1,000,000 × 13 B + 100,000 × 8 B = 13.8 MB` before capacity, versus at least `24 MB` of old base objects. The tag carries the armed flag; `extra_index[i]` names `equipped[]` only for equipped actors.
 
@@ -1056,7 +1056,7 @@ Does growth cause reallocations or copied bytes in a hot build path?
 
 ### DOD-020 — Partition active rows when scans repay transitions
 - **Symptom:** A repeated loop skips inactive rows before doing work for most rows.
-- **Action:** Keep active and inactive rows in separate dense arrays; array membership encodes the flag, and the repeated pass visits only active rows. When external references exist, maintain `ID → (partition, slot)`; if rows cannot move, keep active IDs instead. Compare measured `T_new_build + U × T_new_transition + Q × T_new_scan` with `T_old_build + U × T_old_transition + Q × T_old_scan` on the same workload. Include ID-map and order-maintenance time.
+- **Action:** Keep active and inactive rows in separate dense arrays. Let array membership encode the flag. Scan only the active array. When external references exist, maintain `ID → (partition, slot)`; if rows cannot move, keep active IDs instead. Compare measured `T_new_build + U × T_new_transition + Q × T_new_scan` with `T_old_build + U × T_old_transition + Q × T_old_scan` on the same workload. Include ID-map and order-maintenance time.
 - **Check:** Measure scanned rows, state-transition moves, total row bytes, and full-pass latency. Preserve stable IDs, output order, and concurrent update behavior. Swap removal moves O(1) rows but changes order; count ID-map maintenance separately. Order-preserving moves can cost O(N).
 - **Example:** With 1,000,000 rows and 10,000 active rows, the active partition visits 10,000 rows and needs no per-row active check. Each state transition moves a row and fixes its ID mapping. An active-ID list visits 10,000 IDs but then fetches their rows. Compare both against the 1,000,000-row scan; counts alone do not prove speed.
 
