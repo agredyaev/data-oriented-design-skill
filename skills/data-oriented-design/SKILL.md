@@ -1,6 +1,6 @@
 ---
 name: data-oriented-design
-description: Use when reviewing memory or runtime costs of retained collections in code. Propose concrete AoS/SoA, flat-array, cache, and ID-based redesigns; check time, space, and behavior across languages.
+description: Use when diagnosing CPU, memory, wall-clock, allocation, locality, indexing, repeated traversal, serialization, or parallel-scaling costs where data representation, access order, lifetime, or ownership can affect performance. Require measured evidence before a DOD redesign.
 ---
 
 # Data-Oriented Design
@@ -11,25 +11,28 @@ Find the expensive work before you change data layout. Measure the work, access 
 
 ## Language rules
 
-Use these rules for all skill output.
+Apply these rules to generated review output. Do not rewrite code identifiers or quoted source text.
 
-- Use active voice.
-- Use the imperative for procedures.
+- Use the same word for the same thing every time.
+- Use approved common words when possible.
+- Do not omit articles or determiners such as `the`, `a`, `an`, and `this`.
+- Use active voice for procedures.
+- Use the imperative for instructions.
 - Put one instruction in each procedural sentence.
-- Use the same term with the same meaning.
-- Avoid vague pronouns.
-- Avoid unnecessary synonyms.
+- Put one topic in each paragraph.
+- Use vertical lists for complex text.
 - Keep procedural sentences at 20 words or fewer.
 - Keep descriptive sentences at 25 words or fewer.
-- Keep paragraphs at six sentences or fewer.
 - Keep noun clusters to three words when practical.
-- Prefer simple present for descriptions.
+- Use simple present, simple past, or simple future for descriptions.
+- Use infinitives when they make an instruction clearer.
+- Do not use progressive verb forms.
+- Do not use perfect verb forms.
 - Do not use passive voice in procedures.
-- Put conditions before the instruction when this improves clarity.
-- Use vertical lists for three or more related items.
-- Keep code terms unchanged when the code defines the term.
+- Use an `-ing` form only in an established technical name or code identifier.
+- Put a condition before an instruction when this improves clarity.
 
-These rules use the style of Simplified Technical English. They do not claim certified ASD-STE100 compliance.
+These rules follow the supplied Simplified Technical English style. They do not claim certified ASD-STE100 dictionary compliance.
 
 ## Core model
 
@@ -66,7 +69,7 @@ Optimize in this order:
 8. Measure the predicted physical metric after the change.
 9. Measure phase time, total time, memory, and correctness.
 
-Use the same input for the before and after runs. Run enough repetitions to expose noise. Separate cold, warm, and incremental workloads when they have different behavior.
+Use the same input for the before and after runs. Declare an acceptance rule before implementation. Use repeated runs to estimate uncertainty. Separate cold, warm, and incremental workloads when they have different behavior.
 
 ### Workload contract
 
@@ -84,6 +87,7 @@ compiler flags
 cache state
 output validation
 repetition count
+acceptance rule
 ```
 
 Use a workload matrix when scale or distribution changes the access pattern:
@@ -118,7 +122,7 @@ If work grows faster than the required result, fix the algorithm first. Do not u
 
 ### Bottleneck classes
 
-Classify the hot operation before you select a transformation.
+Classify the hot operation before you select a transformation. Use DOD-031 when the measured cause has no DOD path.
 
 | Class | Typical evidence |
 | --- | --- |
@@ -166,35 +170,64 @@ Do not treat this ratio as measured memory traffic. Cache lines, prefetch, reuse
 ```text
 START
  |
- |-- Does N -> 2N cause more than expected work?
- |      |-- YES -> Fix algorithmic work or repeated visits.
+ |-- Does N -> 2N cause more work than the required result explains?
+ |      |-- YES -> Fix algorithmic work or repeated visits. Use DOD-003 or DOD-018.
  |      '-- NO
  |
- |-- Is one phase responsible for meaningful wall time?
- |      |-- NO -> Stop. The candidate cannot move the target KPI.
+ |-- Can the hot phase move the required end-to-end KPI?
+ |      |-- NO -> Stop. Amdahl's law limits the possible gain.
  |      '-- YES
  |
  |-- What limits the hot operation?
- |      |-- Too many operations -> DOD-003, DOD-018, DOD-021
- |      |-- Too many full passes -> fuse, cache, or remove a pass
- |      |-- Wide scan -> DOD-006, DOD-014, DOD-015, DOD-023
- |      |-- Random dependent loads -> DOD-005, DOD-008, DOD-019
- |      |-- Variable child allocations -> DOD-007
- |      |-- Repeated string/value storage -> DOD-022
- |      |-- Realloc/copy traffic -> preallocate and use DOD-010
- |      |-- Rare derived data -> DOD-017
- |      |-- Mostly inactive rows -> DOD-020
- |      |-- Repeated search -> DOD-021
- |      '-- Synchronization -> local ownership, sharding, partitioning
+ |      |
+ |      |-- ALGORITHMIC
+ |      |     |-- Repeated search -> DOD-021
+ |      |     |-- Unchanged input repeats work -> DOD-018
+ |      |     '-- Repeated passes -> DOD-024
+ |      |
+ |      |-- MEMORY
+ |      |     |-- Wide field-subset scan -> DOD-006, DOD-014, DOD-015, DOD-023
+ |      |     |-- Random dependent loads -> DOD-005, DOD-008, DOD-019
+ |      |     |-- Variable child allocations -> DOD-007
+ |      |     |-- Repeated strings -> DOD-022
+ |      |     |-- Repeated canonical values -> DOD-028
+ |      |     |-- Realloc/copy traffic -> DOD-033
+ |      |     |-- Rare derived data -> DOD-017
+ |      |     |-- Poor temporal locality -> DOD-024, DOD-025, DOD-026
+ |      |     '-- Producer/consumer layout conflict -> DOD-027
+ |      |
+ |      |-- CORE
+ |      |     |-- Repeated hashing/comparison of canonical values -> DOD-022 or DOD-028
+ |      |     '-- Other arithmetic/core cost -> OUTSIDE DOD. Optimize the computation.
+ |      |
+ |      |-- FRONT END
+ |      |     |-- Cold variant work inflates the hot path -> DOD-024
+ |      |     '-- Other decode/I-cache cost -> OUTSIDE DOD.
+ |      |
+ |      |-- BRANCH
+ |      |     |-- Rare/cold cases share the hot loop -> DOD-020 or DOD-024
+ |      |     '-- Other speculation cost -> OUTSIDE DOD.
+ |      |
+ |      |-- ALLOCATION
+ |      |     |-- Per-row temporary allocation -> DOD-010
+ |      |     '-- Growth/reallocation -> DOD-033
+ |      |
+ |      |-- SYNCHRONIZATION
+ |      |     '-- Diagnose the scaling limit -> DOD-029
+ |      |
+ |      '-- I/O
+ |            |-- Text parsing or serialization dominates -> DOD-032
+ |            '-- External device/service latency dominates -> OUTSIDE DOD.
  |
- |-- Write a prediction for one physical metric.
- |-- Implement the smallest change.
- |-- Did the predicted metric improve?
+ |-- Write one falsifiable prediction.
+ |-- Implement the smallest targeted change.
+ |-- Validate the measurement method with DOD-030.
+ |-- Did the predicted physical metric pass the declared acceptance rule?
  |      |-- NO -> Reject the performance hypothesis.
  |      '-- YES
  |
- |-- Did the target phase improve beyond noise?
- |      |-- NO -> Classify as memory/structure win only, if applicable.
+ |-- Did the target phase pass the declared acceptance rule?
+ |      |-- NO -> Classify the result without claiming a performance win.
  |      '-- YES
  |
  '-- Did end-to-end KPI and correctness pass?
@@ -207,20 +240,24 @@ START
 | Measured cause | Candidate change | Main rules |
 | --- | --- | --- |
 | Avoidable logical work | prune, index, incremental update | DOD-003, DOD-018, DOD-021 |
-| Repeated full passes | remove, fuse, cache | DOD-003, DOD-010, DOD-018 |
-| Wide AoS scan | SoA, hot/cold split, AoSoA | DOD-006, DOD-014 |
+| Repeated full passes | remove, fuse, split, or cache | DOD-024 |
+| Wide AoS scan | AoS, SoA, hot/cold split, or AoSoA | DOD-006, DOD-014 |
 | Pointer chasing | dense owner plus typed IDs | DOD-005, DOD-008, DOD-019 |
 | Per-row child allocation | side array plus range | DOD-007 |
 | Repeated string keys | string pool plus typed ID | DOD-022 |
+| Repeated canonical values | canonical pool plus typed ID | DOD-028 |
 | Sparse optional payload | present-only side storage | DOD-015 |
 | Wide variant rows | common columns plus side payloads | DOD-016 |
 | Rare derived fields | recompute from retained source | DOD-017 |
 | Mostly inactive rows | active partition or active IDs | DOD-020 |
 | Repeated key search | index with lifetime cost | DOD-021 |
 | Many independent flags | packed mask | DOD-023 |
-| Reallocation and copy | preallocate or reuse scratch | DOD-010 |
-| Poor temporal locality | fusion, blocking, clustering | DOD-003, DOD-006, DOD-010 |
-| Shared mutable state | local ownership, sharding | DOD-010, DOD-012 |
+| Growth and reallocation | reserve capacity or size exactly | DOD-033 |
+| Poor temporal locality | fusion, fission, blocking, clustering | DOD-024, DOD-025, DOD-026 |
+| Producer/consumer layout conflict | one measured packing stage | DOD-027 |
+| Shared mutable state | local ownership, sharding, partitioning | DOD-029 |
+| Text cache/serialization overhead | compact machine-oriented format | DOD-032 |
+| Measurement uncertainty | validate benchmark and PMU evidence | DOD-012, DOD-030 |
 
 ## Layout choices
 
@@ -442,20 +479,25 @@ Do retained rows use pointers or one allocation per node?
 ### DOD-006 decision tree
 
 ```text
-Does a hot pass read only a field subset?
+Does a hot operation use only a subset of fields?
  |-- NO
- |    '-- Do repeated rows waste alignment padding?
+ |    |
+ |    '-- Does repeated row padding breach a memory budget?
  |           |-- NO -> Keep AoS.
- |           '-- YES -> Test reorder or split columns.
+ |           '-- YES -> Test field reorder first. Then test a split if padding remains.
  '-- YES
       |
-      |-- Is access sequential?
-      |      |-- YES -> Test SoA.
-      |      '-- NO -> Test hot/cold split or AoSoA.
+      |-- Does measured full-row work dominate the target workload?
+      |      |-- YES -> Keep AoS as the baseline.
+      |      '-- NO
       |
-      '-- Do most consumers need full rows?
-             |-- YES -> Keep AoS or use AoSoA.
-             '-- NO -> Keep the best measured split.
+      |-- Is the hot access a sequential field-subset scan?
+      |      |-- NO -> Test a hot/cold split. Keep AoS if random object access wins.
+      |      '-- YES
+      |
+      |-- Does pure SoA create page, TLB, or multi-column working-set cost?
+             |-- NO -> Test SoA.
+             '-- YES -> Test AoSoA and benchmark the chunk size.
 ```
 
 ### DOD-007 decision tree
@@ -517,7 +559,7 @@ Does a pass allocate or retain temporary state?
       |      |-- NO -> Use local reusable scratch.
       |      '-- YES
       |
-      |-- Is the same result reused enough to repay retention?
+      |-- Does measured saved query time exceed cache build and invalidation cost?
              |-- NO -> Recompute locally.
              '-- YES -> Cache with explicit invalidation.
 ```
@@ -553,7 +595,7 @@ Do before and after use the same workload?
       |      |-- NO -> Complete the trade-off.
       |      '-- YES
       |
-      '-- Does the predicted metric move with the target KPI?
+      '-- Do the predicted metric and target KPI pass the predeclared acceptance rule?
              |-- NO -> Reject the performance hypothesis.
              '-- YES -> Accept if correctness also passes.
 ```
@@ -593,15 +635,15 @@ Is row size larger than the field sum?
 ### DOD-015 decision tree
 
 ```text
-Does every row reserve a large optional payload?
+Does every row reserve an optional payload?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Is presence sparse enough to save total bytes?
+      |-- Is new core + side index + present payload smaller than the old inline layout?
       |      |-- NO -> Keep inline.
       |      '-- YES
       |
-      |-- Does side lookup meet its read and update budgets?
+      |-- Do measured side lookup and update costs meet their budgets?
              |-- NO -> Keep inline.
              '-- YES -> Use present-only side storage.
 ```
@@ -629,8 +671,8 @@ Is a retained field fully derivable from retained input?
  |-- NO -> Keep it.
  '-- YES
       |
-      |-- Is the field read rarely enough to repay recompute?
-      |      |-- NO -> Keep it.
+      |-- Does measured recompute cost meet the read-time budget?
+      |      |-- NO -> Keep the field.
       |      '-- YES
       |
       '-- Does source lifetime cover every read?
@@ -673,11 +715,11 @@ Does a sequential scan perform one random lookup per row?
 ### DOD-020 decision tree
 
 ```text
-Does a repeated pass skip many inactive rows?
+Does a repeated pass skip inactive rows?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Are state transitions rare enough to repay moves?
+      |-- Is new build + transition cost + scan cost lower than the old measured total?
       |      |-- NO -> Keep the flag scan.
       |      '-- YES
       |
@@ -709,8 +751,8 @@ Do retained rows repeat string keys or hash the same bytes?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Is unique_count much smaller than occurrence_count?
-      |      |-- NO -> Measure before interning.
+      |-- Is pool + ID + lookup storage smaller than the current retained string storage?
+      |      |-- NO -> Keep strings unless CPU evidence justifies interning.
       |      '-- YES
       |
       |-- Can one owned pool keep stable string identity?
@@ -732,6 +774,166 @@ Do rows store several independent boolean fields?
       |-- Do threads update different flags concurrently?
              |-- YES -> Measure contention before packing.
              '-- NO -> Test a named bit mask.
+```
+
+### DOD-024 decision tree
+
+```text
+Do two or more passes visit the same data?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can fusion preserve order, errors, and dependencies?
+      |      |-- YES -> Test fusion.
+      |      '-- NO
+      |
+      |-- Does rare or cold work enlarge the hot loop?
+             |-- YES -> Test fission.
+             '-- NO -> Keep separate passes.
+```
+
+### DOD-025 decision tree
+
+```text
+Does the operation reuse data after the working set leaves cache?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can one block fit the target cache level with required companion data?
+      |      |-- NO -> Keep the current schedule.
+      |      '-- YES
+      |
+      '-- Does block overhead stay within the phase budget?
+             |-- NO -> Keep the current schedule.
+             '-- YES -> Test blocking or tiling.
+```
+
+### DOD-026 decision tree
+
+```text
+Does a key cause random access to stable companion data?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can work order change without changing observable output?
+      |      |-- NO -> Use a separate order index.
+      |      '-- YES
+      |
+      '-- Is reorder cost lower than the saved random-access cost?
+             |-- NO -> Keep the current order.
+             '-- YES -> Test clustering or reordering.
+```
+
+### DOD-027 decision tree
+
+```text
+Do the producer and repeated consumers need different layouts?
+ |-- NO -> Use one representation.
+ '-- YES
+      |
+      |-- Is packing deterministic and behavior-preserving?
+      |      |-- NO -> Keep one representation.
+      |      '-- YES
+      |
+      '-- Is packing cost lower than measured downstream savings?
+             |-- NO -> Keep one representation.
+             '-- YES -> Add one linear packing stage.
+```
+
+### DOD-028 decision tree
+
+```text
+Do non-string canonical values repeat across retained data?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can equality use one stable canonical identity?
+      |      |-- NO -> Keep explicit values.
+      |      '-- YES
+      |
+      '-- Does pool + ID + lookup cost beat retained value and comparison cost?
+             |-- NO -> Keep explicit values.
+             '-- YES -> Test a typed canonical-value ID.
+```
+
+### DOD-029 decision tree
+
+```text
+Does throughput stop scaling as thread count rises?
+ |-- NO -> Keep the current ownership model.
+ '-- YES
+      |
+      |-- Do measurements show lock, atomic, false-sharing, imbalance, bandwidth, or NUMA cost?
+      |      |-- NO -> Do not add sharding.
+      |      '-- YES
+      |
+      '-- Can ownership partition the mutable state?
+             |-- YES -> Test thread-local state or sharding.
+             '-- NO -> Test work partitioning or another synchronization design.
+```
+
+### DOD-030 decision tree
+
+```text
+Does the experiment depend on timing or PMU evidence?
+ |-- NO -> Use the applicable functional rule.
+ '-- YES
+      |
+      |-- Was the acceptance rule declared before implementation?
+      |      |-- NO -> Declare it and rerun.
+      |      '-- YES
+      |
+      |-- Are before/after workloads identical and repeated?
+      |      |-- NO -> Benchmark is invalid.
+      |      '-- YES
+      |
+      |-- Are PMU event groups free from harmful multiplexing?
+             |-- NO -> Split the event groups and rerun.
+             '-- YES -> Use the evidence.
+```
+
+### DOD-031 decision tree
+
+```text
+Is the dominant bottleneck outside data representation, access order, lifetime, or ownership?
+ |-- NO -> Use the matching DOD rule.
+ '-- YES
+      |
+      |-- Can a DOD change remove the measured cause directly?
+      |      |-- YES -> Use the matching DOD rule and state the cause.
+      |      '-- NO -> Report OUTSIDE DOD and stop proposing layout changes.
+```
+
+### DOD-032 decision tree
+
+```text
+Does text parsing, formatting, or serialization dominate the target path?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is the format internal or cache-only?
+      |      |-- NO -> Preserve the external contract.
+      |      '-- YES
+      |
+      '-- Can a compact binary format avoid parsing or copies within its budget?
+             |-- NO -> Keep the current format.
+             '-- YES -> Test the machine-oriented format.
+```
+
+### DOD-033 decision tree
+
+```text
+Does growth cause reallocations or copied bytes in a hot build path?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is exact or bounded output cardinality known before growth?
+      |      |-- YES -> Reserve the required capacity.
+      |      '-- NO
+      |
+      '-- Can a measured estimate reduce growth without excessive unused capacity?
+             |-- NO -> Keep dynamic growth.
+             '-- YES -> Reserve from the estimate.
 ```
 
 ## Diagnose the work
@@ -864,6 +1066,66 @@ Do rows store several independent boolean fields?
 - **Check:** Measure build, lookup, and update time. Report break-even query count or `UNVERIFIED` when times are missing. Keep output order independent of index order.
 - **Example:** With no updates and fixed `L_old > L_new`, the index repays build time only when `Q > B / (L_old - L_new)`.
 
+### DOD-024 — Fuse or split passes from measured reuse
+- **Symptom:** Several passes revisit the same data, or one hot loop contains rare cold work.
+- **Action:** Test fusion when passes can share hot data. Test fission when rare work pollutes the hot path.
+- **Check:** Preserve dependencies, errors, order, and output. Measure visits, cache behavior, phase time, and total time.
+- **Example:** Replace three full scans with one fused scan only when the merged loop preserves required ordering.
+
+### DOD-025 — Block work to bound the working set
+- **Symptom:** Reused data leaves the target cache before the next consumer uses it.
+- **Action:** Process bounded blocks that include all companion data for the local work.
+- **Check:** Measure block overhead, cache behavior, TLB behavior, phase time, and total time.
+- **Example:** Process rows in 256-row blocks only after a benchmark shows that this block size wins.
+
+### DOD-026 — Cluster work to remove random access
+- **Symptom:** A stable key causes repeated random access to companion data.
+- **Action:** Group work by the key when the order can change safely.
+- **Check:** Include sort or reorder cost. Preserve canonical output with a separate order index when required.
+- **Example:** Group work by `parent_id`, process each parent group, then emit results in canonical order.
+
+### DOD-027 — Separate producer and consumer layouts
+- **Symptom:** The producer needs an easy-to-build shape, but repeated consumers need a different layout.
+- **Action:** Add one deterministic linear packing stage when measured downstream savings repay its cost.
+- **Check:** Measure producer cost, packing cost, writes, copies, consumer savings, and total wall time.
+- **Example:** Parse into a simple builder form, pack once into dense columns, then scan those columns repeatedly.
+
+### DOD-028 — Intern repeated canonical values
+- **Symptom:** Non-string values repeat, and internal work repeatedly stores, hashes, or compares the same structure.
+- **Action:** Store one canonical value and use a typed ID for repeated references.
+- **Check:** Define canonical equality. Measure pool bytes, lookup cost, comparison cost, build time, and retained bytes.
+- **Example:** Store one canonical type description and use `TypeId` in rows that refer to that type.
+
+### DOD-029 — Partition mutable state only after a scaling diagnosis
+- **Symptom:** More threads stop improving throughput.
+- **Action:** Measure the scaling limit before you add thread-local state, sharding, or cache-line isolation.
+- **Check:** Classify lock, atomic, false-sharing, imbalance, bandwidth, scheduler, and NUMA costs.
+- **Example:** Shard a mutable pool only after measurements show shared-map contention.
+
+### DOD-030 — Validate benchmark and PMU evidence
+- **Symptom:** A performance claim depends on noisy timing or hardware counters.
+- **Action:** Declare the acceptance rule before implementation. Repeat matched A/B workloads. Split PMU groups when multiplexing affects evidence.
+- **Check:** Report the acceptance rule, repetitions, variation, cache state, event groups, and PMU time-running values.
+- **Example:** Reject a 1% timing change when the declared uncertainty rule cannot distinguish the result from baseline variation.
+
+### DOD-031 — Stop DOD when the measured cause is outside DOD
+- **Symptom:** The hotspot is core, front-end, branch, device, or service bound without a data-path cause.
+- **Action:** Report `OUTSIDE DOD`. Do not propose a layout change without direct evidence.
+- **Check:** Name the measured bottleneck and the missing DOD causal link.
+- **Example:** A compute-heavy divide loop stays a computation problem when data layout does not cause the stalls.
+
+### DOD-032 — Use a machine-oriented internal serialization format
+- **Symptom:** Internal cache or build paths spend meaningful time parsing, formatting, or copying text metadata.
+- **Action:** Test a compact binary format only for internal or versioned data.
+- **Check:** Preserve external contracts. Measure file bytes, parse time, copy bytes, cache-hit time, and compatibility behavior.
+- **Example:** Replace an internal text cache record with a versioned binary record when parsing dominates cache-hit time.
+
+### DOD-033 — Preallocate from known or measured cardinality
+- **Symptom:** A hot build path repeatedly grows arrays and copies retained elements.
+- **Action:** Reserve exact capacity when the size is known. Otherwise, reserve from a measured bound or estimate.
+- **Check:** Measure reallocations, copied bytes, unused capacity, peak bytes, and build time.
+- **Example:** Reserve token storage from an input-size estimate when the estimate reduces growth without excessive unused memory.
+
 ## Prove and report
 
 ### DOD-011 — Preserve behavior through layout changes
@@ -886,4 +1148,4 @@ Do rows store several independent boolean fields?
 
 ## Quality gate for this skill's output
 
-For each inspected operation, report applicable rule IDs and `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A`. Even `UNVERIFIED` gives a concrete `before → after` layout and names the missing measurement. Show build, query, update, and extra-space costs; never claim speed from Big O or row width alone. If a candidate fails, leave the original budget breach open.
+For each inspected operation, report applicable rule IDs and `FINDING`, `UNVERIFIED`, `NO FINDING`, `N/A`, or `OUTSIDE DOD`. Even `UNVERIFIED` gives a concrete `before → after` layout and names the missing measurement. Show build, query, update, and extra-space costs; never claim speed from Big O or row width alone. If a candidate fails, leave the original budget breach open.
