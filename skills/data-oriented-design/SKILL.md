@@ -5,33 +5,734 @@ description: Use when reviewing memory or runtime costs of retained collections 
 
 # Data-Oriented Design
 
-Inspect the retained array, the loop that reads it, and updates that move its rows. A matching access pattern can justify a replacement before profiling. Use retained bytes, pass latency, and update time to decide whether to adopt it.
+Find the expensive work before you change data layout. Measure the work, access pattern, bottleneck, and end-to-end result. Use DOD only after evidence identifies a physical cost.
 
-**Build** creates or updates retained data. **Query** reads it. **Canonical** data defines identity and output order. `N` is rows, `M` another input count, `Q` queries, `U` updates, and `K` returned rows. Examples are hypothetical; derived counts are not benchmark results. Bytes use decimal units.
+**Build** creates or updates retained data. **Query** reads it. **Canonical** data defines identity and output order. `N` is rows, `M` another input count, `Q` queries, `U` updates, and `K` returned rows. Examples are hypothetical. Derived counts are not benchmark results. Bytes use decimal units.
 
-## Run one layout experiment
+## Language rules
 
-1. Read the container and its loops. Start with code that repeatedly traverses a retained collection, then rank candidates by row count, width, call count, or a known budget/profile. A 20-row startup scan needs no redesign when it meets its budget.
-2. Write the code signature and target shape from the table below. Draw both layouts, name the fields each pass reads, and note insert/delete/reorder behavior. Propose the shape even if no measurements exist; label its benefit `UNVERIFIED`.
-3. Calculate old and proposed retained bytes, build/query/update complexity, and extra space. State identity, order, error, and serialization invariants. For an implementation, change one layout property per patch.
-4. Compare old and new behavior and costs on the same workload. Adopt only when the target budget is met without breaking another stated budget. In a review, specify the missing measurement.
+Use these rules for all skill output.
+
+- Use active voice.
+- Use the imperative for procedures.
+- Put one instruction in each procedural sentence.
+- Use the same term with the same meaning.
+- Avoid vague pronouns.
+- Avoid unnecessary synonyms.
+- Keep procedural sentences at 20 words or fewer.
+- Keep descriptive sentences at 25 words or fewer.
+- Keep paragraphs at six sentences or fewer.
+- Keep noun clusters to three words when practical.
+- Prefer simple present for descriptions.
+- Do not use passive voice in procedures.
+- Put conditions before the instruction when this improves clarity.
+- Use vertical lists for three or more related items.
+- Keep code terms unchanged when the code defines the term.
+
+These rules use the style of Simplified Technical English. They do not claim certified ASD-STE100 compliance.
+
+## Core model
+
+Use this model to reason about cost:
+
+```text
+Total cost ≈
+logical work
+× visits per item
+× physical cost per visit
++ allocation cost
++ synchronization cost
++ I/O cost
+```
+
+Optimize in this order:
+
+1. Remove unnecessary work.
+2. Remove repeated work.
+3. Reduce the physical cost per visit.
+4. Improve access order and locality.
+5. Improve data ownership and parallel scaling.
+6. Validate the predicted cause.
+
+## Run one performance experiment
+
+1. Freeze the workload and benchmark conditions.
+2. Test scaling with `N`, `2N`, and `4N`.
+3. Find the phase and operation that dominate wall time.
+4. Classify the bottleneck before you select a DOD change.
+5. Record the access pattern for the hot operation.
+6. Select the smallest change that targets the measured cause.
+7. Write a falsifiable prediction before implementation.
+8. Measure the predicted physical metric after the change.
+9. Measure phase time, total time, memory, and correctness.
+
+Use the same input for the before and after runs. Run enough repetitions to expose noise. Separate cold, warm, and incremental workloads when they have different behavior.
+
+### Workload contract
+
+Record these values before each experiment:
+
+```text
+input
+input distribution
+build mode
+feature flags
+thread count
+machine
+CPU affinity, if used
+compiler flags
+cache state
+output validation
+repetition count
+```
+
+Use a workload matrix when scale or distribution changes the access pattern:
+
+| Dimension | Suggested cases |
+| --- | --- |
+| Scale | small, medium, production, stress |
+| Cardinality | low, normal, high |
+| Cache state | cold, warm |
+| Change size | full, incremental |
+| Relation width | short, normal, long-tail |
+
+### Scaling gate
+
+Count logical operations as well as wall time.
+
+Record, when applicable:
+
+```text
+rows visited
+edges visited
+lookups
+hash operations
+comparisons
+copies
+bytes copied
+allocations
+passes
+```
+
+If work grows faster than the required result, fix the algorithm first. Do not use layout work to hide avoidable work.
+
+### Bottleneck classes
+
+Classify the hot operation before you select a transformation.
+
+| Class | Typical evidence |
+| --- | --- |
+| Algorithmic | excess operations, poor scaling, repeated work |
+| Memory | cache misses, bandwidth, dependent loads, TLB walks, store pressure |
+| Core | expensive arithmetic, hashing, divides, dependency chains |
+| Front end | instruction-cache or decode pressure |
+| Branch | high miss rate or bad speculation |
+| Allocation | malloc/free, realloc, copies, fragmentation |
+| Synchronization | locks, atomics, false sharing, contention |
+| I/O | filesystem, serialization, syscalls |
+
+### Access profile
+
+Record these properties for the hot operation:
+
+| Property | Question |
+| --- | --- |
+| Count | How many items does the operation visit? |
+| Visits | How many times does it visit each item? |
+| Reads | Which fields does it read? |
+| Writes | Which fields does it write? |
+| Order | Is access sequential, clustered, or random? |
+| Indirection | How many dependent loads occur? |
+| Collections | Does each row own variable-size data? |
+| Cardinality | How many values are unique? |
+| Optionality | How often is each optional field present? |
+| Lifetime | How long does each allocation stay live? |
+| Reuse | When does the operation use the same data again? |
+| Ownership | Which thread reads or changes the data? |
+
+Use static access amplification only as a screening metric:
+
+```text
+static access amplification =
+physical record width
+/
+logically required field width
+```
+
+Do not treat this ratio as measured memory traffic. Cache lines, prefetch, reuse, TLB behavior, and stores can change the real cost.
+
+## Global decision tree
+
+```text
+START
+ |
+ |-- Does N -> 2N cause more than expected work?
+ |      |-- YES -> Fix algorithmic work or repeated visits.
+ |      '-- NO
+ |
+ |-- Is one phase responsible for meaningful wall time?
+ |      |-- NO -> Stop. The candidate cannot move the target KPI.
+ |      '-- YES
+ |
+ |-- What limits the hot operation?
+ |      |-- Too many operations -> DOD-003, DOD-018, DOD-021
+ |      |-- Too many full passes -> fuse, cache, or remove a pass
+ |      |-- Wide scan -> DOD-006, DOD-014, DOD-015, DOD-023
+ |      |-- Random dependent loads -> DOD-005, DOD-008, DOD-019
+ |      |-- Variable child allocations -> DOD-007
+ |      |-- Repeated string/value storage -> DOD-022
+ |      |-- Realloc/copy traffic -> preallocate and use DOD-010
+ |      |-- Rare derived data -> DOD-017
+ |      |-- Mostly inactive rows -> DOD-020
+ |      |-- Repeated search -> DOD-021
+ |      '-- Synchronization -> local ownership, sharding, partitioning
+ |
+ |-- Write a prediction for one physical metric.
+ |-- Implement the smallest change.
+ |-- Did the predicted metric improve?
+ |      |-- NO -> Reject the performance hypothesis.
+ |      '-- YES
+ |
+ |-- Did the target phase improve beyond noise?
+ |      |-- NO -> Classify as memory/structure win only, if applicable.
+ |      '-- YES
+ |
+ '-- Did end-to-end KPI and correctness pass?
+        |-- NO -> Reject or narrow the change.
+        '-- YES -> Adopt.
+```
+
+## Transformation map
+
+| Measured cause | Candidate change | Main rules |
+| --- | --- | --- |
+| Avoidable logical work | prune, index, incremental update | DOD-003, DOD-018, DOD-021 |
+| Repeated full passes | remove, fuse, cache | DOD-003, DOD-010, DOD-018 |
+| Wide AoS scan | SoA, hot/cold split, AoSoA | DOD-006, DOD-014 |
+| Pointer chasing | dense owner plus typed IDs | DOD-005, DOD-008, DOD-019 |
+| Per-row child allocation | side array plus range | DOD-007 |
+| Repeated string keys | string pool plus typed ID | DOD-022 |
+| Sparse optional payload | present-only side storage | DOD-015 |
+| Wide variant rows | common columns plus side payloads | DOD-016 |
+| Rare derived fields | recompute from retained source | DOD-017 |
+| Mostly inactive rows | active partition or active IDs | DOD-020 |
+| Repeated key search | index with lifetime cost | DOD-021 |
+| Many independent flags | packed mask | DOD-023 |
+| Reallocation and copy | preallocate or reuse scratch | DOD-010 |
+| Poor temporal locality | fusion, blocking, clustering | DOD-003, DOD-006, DOD-010 |
+| Shared mutable state | local ownership, sharding | DOD-010, DOD-012 |
+
+## Layout choices
+
+Choose between AoS, SoA, and AoSoA from the measured access pattern.
+
+- Keep AoS when most fields are used together.
+- Test SoA for sequential field-subset scans.
+- Test AoSoA when pure SoA increases page or TLB pressure.
+- Benchmark the chunk size for AoSoA.
+- Do not rebuild full rows inside a hot SoA loop.
+
+## Access-order choices
+
+Layout is only one part of DOD.
+
+Test these changes when locality or visit count is the problem:
+
+- Fuse passes when they use the same data and preserve semantics.
+- Split a pass when rare cold work pollutes the hot path.
+- Block work when a smaller working set can stay in cache.
+- Cluster work when a key causes random access.
+- Include sort or reorder cost in the result.
+
+## Reads, writes, and lifetime
+
+Measure reads and writes.
+
+Record:
+
+```text
+bytes read
+bytes written
+copies
+memcpy bytes
+producer stores
+packing stores
+allocation count
+allocated bytes
+reallocated bytes
+peak live bytes
+```
+
+A smaller read path can still lose end-to-end when build or packing writes increase.
+
+## Concurrency gate
+
+Build a scaling curve before you add sharding:
+
+```text
+threads | wall
+1
+2
+4
+8
+16
+```
+
+If scaling stops, classify the cause:
+
+```text
+serial fraction
+lock contention
+atomic contention
+false sharing
+memory bandwidth saturation
+load imbalance
+scheduler overhead
+NUMA
+```
+
+Use thread-local storage, sharding, or cache-line isolation only after evidence supports the cause.
+
+## Measurement rules
+
+- Use repeated runs.
+- Report median and variation.
+- Keep before and after conditions equal.
+- Interleave A/B runs when machine drift can matter.
+- Separate cold and warm workloads.
+- Measure PMU events in small related groups.
+- Check PMU multiplexing and time-running values.
+- Do not infer speed from Big O or row width alone.
+
+## Falsifiable hypothesis
+
+Write this block before implementation:
+
+```text
+HOTSPOT
+<operation and share of target time>
+
+EVIDENCE
+<measurement that identifies the cost>
+
+HYPOTHESIS
+<physical cause>
+
+CHANGE
+<smallest proposed transformation>
+
+PREDICTION
+<metric that must move and direction>
+
+CORRECTNESS
+<invariants that must remain true>
+```
+
+If the predicted physical metric does not move, reject the performance hypothesis.
+
+## Result classes
+
+Use one result class:
+
+- **PERFORMANCE WIN** — target wall time improves, and the causal metric supports the hypothesis.
+- **MEMORY WIN** — memory or artifact size improves, but wall time does not.
+- **SCALABILITY WIN** — larger workloads improve more than small workloads.
+- **PARALLEL WIN** — thread scaling improves.
+- **NO EFFECT** — target metrics stay within noise.
+- **REGRESSION** — a target budget becomes worse.
+
+## Code signatures
 
 | Code signature | Candidate end state | Rule |
 | --- | --- | --- |
-| Repeated loop over `N` AoS rows reads only `row.key` | Dense `keys[i]`; other fields stay together as `payloads[i]` | DOD-006 |
-| AoS row repeats alignment padding `N` times | Separate columns by alignment when reordering cannot remove padding | DOD-014, DOD-006 |
+| Repeated loop over `N` AoS rows reads only `row.key` | Dense `keys[i]`; keep related payload fields together | DOD-006 |
+| AoS row repeats alignment padding `N` times | Reorder fields, or split columns when padding remains | DOD-014, DOD-006 |
 | Parent rows each own a child array | One child array; each parent stores `(offset, length)` | DOD-007 |
-| Long-lived pointers to movable or reused rows | One row owner; checked typed IDs outside it | DOD-005 |
-| Rows or indexes retain string keys | Intern bytes once; store bounded integer `StringId` keys and one byte pool | DOD-022 |
-| Build resolves names, but runtime rows still store string links | Resolve once to typed row IDs; keep names only for required output | DOD-008 |
-| Every row stores line, column, or a value derivable from retained input | Keep source plus compact start/kind; derive the other value on demand | DOD-017 |
-| A pass reads only `row.flag`, but rows cannot be partitioned | Parallel `flags[i]` column; test a bitset if only tests are needed | DOD-006 |
-| Base object points to subclass payload, or every row pays for largest variant | Common SoA columns, tag encodings, and present-only payload arrays | DOD-016 |
-| Each row stores multiple independent boolean fields | One explicitly defined bit mask, if the aligned row shrinks | DOD-023 |
-| Optional payload reserved in every row | Core rows plus present-only side storage | DOD-015 |
-| Repeated loop skips inactive rows before work | Active row partition, or active IDs when rows cannot move | DOD-020 |
-| Repeated `N × M` scan or key search | Grouped rows or an index, including maintenance cost | DOD-003, DOD-021 |
-| Repeated queries recompute the same result | Cached result or incrementally maintained aggregate, including update cost | DOD-003, DOD-010 |
+| Long-lived pointers refer to movable rows | One row owner; checked typed IDs outside it | DOD-005 |
+| Rows retain repeated string keys | Intern bytes once; store bounded `StringId` values | DOD-022 |
+| Build resolves names, but rows retain string links | Resolve once to typed row IDs | DOD-008 |
+| Every row stores a derivable value | Keep the source inputs; derive the value on demand | DOD-017 |
+| A pass reads only `row.flag` | Use a flag column or bitset after measurement | DOD-006, DOD-023 |
+| Every row pays for the largest variant | Common columns plus present-only payload arrays | DOD-016 |
+| Optional payload is reserved in every row | Core rows plus present-only side storage | DOD-015 |
+| A repeated loop skips inactive rows | Active partition or active IDs | DOD-020 |
+| Repeated `N × M` scan or key search | Grouped rows or an index with maintenance cost | DOD-003, DOD-021 |
+| Repeated queries recompute one result | Cache or incrementally maintain the result | DOD-003, DOD-010 |
+| Several full passes use the same data | Fuse or block the passes when semantics allow | DOD-003, DOD-010 |
+| Pure SoA causes page or TLB pressure | Use bounded SoA chunks inside an AoSoA layout | DOD-006 |
+
+## Decision trees for every rule
+
+### DOD-001 decision tree
+
+```text
+Do you know who builds, owns, reads, updates, and emits the data?
+ |-- NO -> Trace the full lifetime.
+ '-- YES
+      |
+      |-- Does each proposed deletion have a named last consumer?
+      |      |-- NO -> Keep the data.
+      |      '-- YES -> Record the release point.
+      |
+      '-- Does reordering preserve canonical identity and output order?
+             |-- NO -> Keep canonical order or add an order index.
+             '-- YES -> Continue.
+```
+
+### DOD-002 decision tree
+
+```text
+Did the review find a repeated cost or a budget breach?
+ |-- NO -> NO FINDING.
+ '-- YES
+      |
+      |-- Is there a concrete before -> after representation?
+      |      |-- NO -> Add one.
+      |      '-- YES
+      |
+      |-- Are target costs and invariants stated?
+      |      |-- NO -> Add them.
+      |      '-- YES -> FINDING or UNVERIFIED.
+```
+
+### DOD-003 decision tree
+
+```text
+Does work scale with N, M, Q, or U?
+ |-- NO -> Measure fixed overhead instead.
+ '-- YES
+      |
+      |-- Is avoidable work larger than layout cost?
+      |      |-- YES -> Change the algorithm first.
+      |      '-- NO
+      |
+      |-- Do repeated passes touch the same data?
+      |      |-- YES -> Test fusion, caching, or incrementality.
+      |      '-- NO -> Calculate build, query, update, and space costs.
+```
+
+### DOD-004 decision tree
+
+```text
+Does the current path exceed a stated budget?
+ |-- NO -> Keep it. Report NO FINDING.
+ '-- YES
+      |
+      |-- Is the budget based on worst-case valid input?
+      |      |-- NO -> Add the missing bound.
+      |      '-- YES -> Evaluate a replacement.
+```
+
+### DOD-005 decision tree
+
+```text
+Do retained rows use pointers or one allocation per node?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Does profiling show pointer, cache, TLB, or memory cost?
+      |      |-- NO -> UNVERIFIED.
+      |      '-- YES
+      |
+      |-- Can one owner address every row by a bounded slot?
+      |      |-- NO -> Keep pointers or use another stable handle.
+      |      '-- YES -> Test typed IDs.
+```
+
+### DOD-006 decision tree
+
+```text
+Does a hot pass read only a field subset?
+ |-- NO
+ |    '-- Do repeated rows waste alignment padding?
+ |           |-- NO -> Keep AoS.
+ |           '-- YES -> Test reorder or split columns.
+ '-- YES
+      |
+      |-- Is access sequential?
+      |      |-- YES -> Test SoA.
+      |      '-- NO -> Test hot/cold split or AoSoA.
+      |
+      '-- Do most consumers need full rows?
+             |-- YES -> Keep AoS or use AoSoA.
+             '-- NO -> Keep the best measured split.
+```
+
+### DOD-007 decision tree
+
+```text
+Does each parent own a separate child allocation?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is child traversal mostly sequential and stable?
+      |      |-- NO -> Keep a dynamic structure.
+      |      '-- YES
+      |
+      |-- Do arbitrary parent appends need O(1)?
+             |-- YES -> Use another append-friendly representation.
+             '-- NO -> Test one child array plus ranges.
+```
+
+### DOD-008 decision tree
+
+```text
+Does runtime traversal resolve internal links from strings?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can build validate and resolve the name once?
+      |      |-- NO -> Keep runtime lookup.
+      |      '-- YES
+      |
+      '-- Are names still required for output?
+             |-- YES -> Keep names at the output boundary.
+             '-- NO -> Retain only typed IDs.
+```
+
+### DOD-009 decision tree
+
+```text
+Can a field use fewer bits?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is the maximum valid value enforced?
+      |      |-- NO -> Do not narrow.
+      |      '-- YES
+      |
+      |-- Do sentinels also fit?
+             |-- NO -> Keep the wider field.
+             '-- YES -> Measure size and conversion cost.
+```
+
+### DOD-010 decision tree
+
+```text
+Does a pass allocate or retain temporary state?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is the state needed after the operation?
+      |      |-- NO -> Use local reusable scratch.
+      |      '-- YES
+      |
+      |-- Is the same result reused enough to repay retention?
+             |-- NO -> Recompute locally.
+             '-- YES -> Cache with explicit invalidation.
+```
+
+### DOD-011 decision tree
+
+```text
+Does the change alter layout, identity, order, or mutation behavior?
+ |-- NO -> Run normal product tests.
+ '-- YES
+      |
+      |-- Is there an independent behavior oracle?
+      |      |-- NO -> Add one before acceptance.
+      |      '-- YES
+      |
+      '-- Do stale IDs, errors, order, and serialization match?
+             |-- NO -> Reject.
+             '-- YES -> Continue to performance acceptance.
+```
+
+### DOD-012 decision tree
+
+```text
+Do before and after use the same workload?
+ |-- NO -> Benchmark is invalid.
+ '-- YES
+      |
+      |-- Are repetitions and variation reported?
+      |      |-- NO -> Repeat the benchmark.
+      |      '-- YES
+      |
+      |-- Are build, query, update, memory, and wall costs measured?
+      |      |-- NO -> Complete the trade-off.
+      |      '-- YES
+      |
+      '-- Does the predicted metric move with the target KPI?
+             |-- NO -> Reject the performance hypothesis.
+             '-- YES -> Accept if correctness also passes.
+```
+
+### DOD-013 decision tree
+
+```text
+Can a reader reproduce the finding?
+ |-- NO -> Add location, counts, costs, and evidence.
+ '-- YES
+      |
+      |-- Is the before -> after design explicit?
+      |      |-- NO -> Add it.
+      |      '-- YES
+      |
+      '-- Is the acceptance measurement named?
+             |-- NO -> Mark UNVERIFIED and name it.
+             '-- YES -> Report the result class.
+```
+
+### DOD-014 decision tree
+
+```text
+Is row size larger than the field sum?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Can private fields be reordered safely?
+      |      |-- YES -> Test reorder first.
+      |      '-- NO
+      |
+      |-- Does padding repeat across many retained rows?
+             |-- NO -> Keep layout.
+             '-- YES -> Test DOD-006 column split.
+```
+
+### DOD-015 decision tree
+
+```text
+Does every row reserve a large optional payload?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is presence sparse enough to save total bytes?
+      |      |-- NO -> Keep inline.
+      |      '-- YES
+      |
+      |-- Does side lookup meet its read and update budgets?
+             |-- NO -> Keep inline.
+             '-- YES -> Use present-only side storage.
+```
+
+### DOD-016 decision tree
+
+```text
+Does every row pay for the largest variant or subclass pointer?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Are common fields shared across variants?
+      |      |-- NO -> Keep separate variant owners.
+      |      '-- YES
+      |
+      |-- Are rare payloads sparse?
+             |-- NO -> Test compact tagged rows.
+             '-- YES -> Test common columns plus side payloads.
+```
+
+### DOD-017 decision tree
+
+```text
+Is a retained field fully derivable from retained input?
+ |-- NO -> Keep it.
+ '-- YES
+      |
+      |-- Is the field read rarely enough to repay recompute?
+      |      |-- NO -> Keep it.
+      |      '-- YES
+      |
+      '-- Does source lifetime cover every read?
+             |-- NO -> Keep the field.
+             '-- YES -> Test on-demand derivation.
+```
+
+### DOD-018 decision tree
+
+```text
+Does an unchanged input trigger parse, rebuild, or serialization?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is there a trusted identity or version check?
+      |      |-- NO -> Add safe change detection first.
+      |      '-- YES
+      |
+      '-- Can the check skip work without skipping validation?
+             |-- NO -> Keep full work.
+             '-- YES -> Skip unchanged work.
+```
+
+### DOD-019 decision tree
+
+```text
+Does a sequential scan perform one random lookup per row?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is companion data stable for the scan lifetime?
+      |      |-- NO -> Keep the lookup.
+      |      '-- YES
+      |
+      '-- Can build align companion data by row ID?
+             |-- NO -> Use a stable dense ID.
+             '-- YES -> Scan the companion array directly.
+```
+
+### DOD-020 decision tree
+
+```text
+Does a repeated pass skip many inactive rows?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Are state transitions rare enough to repay moves?
+      |      |-- NO -> Keep the flag scan.
+      |      '-- YES
+      |
+      |-- May rows move?
+             |-- YES -> Test active/inactive partitions.
+             '-- NO -> Test an active-ID list.
+```
+
+### DOD-021 decision tree
+
+```text
+Do repeated exact or range queries scan the same rows?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Does index build plus maintenance fit the workload?
+      |      |-- NO -> Keep the scan.
+      |      '-- YES
+      |
+      '-- Is Q above the measured break-even point?
+             |-- NO -> Keep the scan.
+             '-- YES -> Add the index.
+```
+
+### DOD-022 decision tree
+
+```text
+Do retained rows repeat string keys or hash the same bytes?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Is unique_count much smaller than occurrence_count?
+      |      |-- NO -> Measure before interning.
+      |      '-- YES
+      |
+      |-- Can one owned pool keep stable string identity?
+             |-- NO -> Keep strings.
+             '-- YES -> Test StringId plus byte pool.
+```
+
+### DOD-023 decision tree
+
+```text
+Do rows store several independent boolean fields?
+ |-- NO -> N/A.
+ '-- YES
+      |
+      |-- Does a mask reduce the final aligned row size?
+      |      |-- NO -> Keep explicit fields.
+      |      '-- YES
+      |
+      |-- Do threads update different flags concurrently?
+             |-- YES -> Measure contention before packing.
+             '-- NO -> Test a named bit mask.
+```
 
 ## Diagnose the work
 
@@ -73,10 +774,10 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 - **Check:** Compare actual row width, allocations, and traversal time. Reject wrong-domain, out-of-range, deleted, and stale IDs; define generation-wrap behavior if slots are reused.
 - **Example:** On a machine with 8 B pointers, `next: pointer` in 10,000 rows uses 80 KB of raw link fields. With at most `2^32-1` slots and no reuse, `next: checked 4 B NodeId` uses 40 KB before row padding. If slots are reused, `NodeId(slot, generation)` rejects a deleted node's old ID; recalculate its width.
 
-### DOD-006 — Split AoS for field-subset passes or repeated padding
+### DOD-006 — Choose AoS, SoA, or AoSoA from the access pattern
 - **Symptom:** A repeated loop over `N` AoS rows reads one field, or each row carries alignment padding that field reordering cannot remove.
-- **Action:** Put fields read together into dense columns; keep fields consumed together in payload rows. Separate differently aligned fields when this removes per-row padding. Access columns by the same index and update them together. Keep AoS if full-row access dominates or the split breaches its update budget.
-- **Check:** Compare actual total bytes, the selected pass, full-row consumers, and insert/delete/reorder costs. Order-preserving insertion may move O(N) elements in every column; swap removal changes order. A scan split alone does not remove field bytes.
+- **Action:** Keep AoS when full-row access dominates. Use SoA for sequential field-subset scans. Test AoSoA when pure SoA increases page or TLB pressure. Keep fields consumed together in one group. Update aligned columns together.
+- **Check:** Compare total bytes, hot-pass time, full-row time, page and TLB behavior, and update cost. Benchmark AoSoA chunk size. A scan split alone does not remove field bytes.
 - **Example:** For 10,000 rows of `{score: 8 B, payload: 56 B}`, a score loop walks a 640 KB row region. `scores[i]: 8 B` plus `payloads[i]: 56 B` makes that loop walk an 80 KB column; raw fields still total 640 KB. The same split works for a flag-only pass: `flags[i]` holds each boolean beside `payloads[i]`, while the pass reads only `flags[]`. If false rows dominate and rows may move, DOD-020 can encode the flag as active/inactive array membership. A separate row `{link: 8 B, tag: 1 B}` can occupy 16 B with 8 B alignment: 160 KB for 10,000 rows. `links[]` plus `tags[]` uses 90 KB of raw elements before capacity. The AoS and column-only scans remain O(N); an active partition under DOD-020 visits A active rows. Time gains are `UNVERIFIED`.
 
 ### DOD-007 — Flatten stable relations
@@ -173,13 +874,13 @@ Inspect the retained array, the loop that reads it, and updates that move its ro
 
 ### DOD-012 — Measure the whole trade-off
 - **Symptom:** A layout change is accepted from byte arithmetic or a microbenchmark alone.
-- **Action:** On identical before/after input, record latency, allocations, retained/peak bytes, and build/update cost. Cover the observed distribution and maximum valid size when capacity drives the change. State hardware, build mode, corpus size, repetitions, and cold/warm state. Label estimates.
-- **Check:** Preserve correctness first. Report latency and bytes saved beside added build, update, and maintenance costs; retain the change only if the stated workload or budget favors that trade-off.
+- **Action:** Use identical before/after input. Record phase time, total time, allocations, retained bytes, peak bytes, reads, writes, and build/update cost. Report repetitions, variation, cold/warm state, and thread count. Measure related PMU events in small groups. Check multiplexing.
+- **Check:** Preserve correctness first. Confirm the predicted physical metric before you claim a performance win. Report producer, consumer, packing, update, and maintenance costs.
 - **Example:** An AoS→SoA split remains `O(N)` for a scan; claim a speed gain only after matched scan and whole-workload measurements.
 
 ### DOD-013 — Make each review finding actionable
 - **Symptom:** A review says “use SoA” or “make this faster” without a loop, scale, or proof.
-- **Action:** Report rule ID, code location and operation, input counts, current layout/cost, proposed layout/cost, preserved invariant, and evidence. Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A` for each considered rule. `UNVERIFIED` still includes a concrete before/after design; it means that benefit lacks measurements or bounds needed to decide.
+- **Action:** Report rule ID, code location, operation, workload, baseline, root-cause evidence, hypothesis, transformation, prediction, invariants, result, and verdict. Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A` for each considered rule.
 - **Check:** A reader can reproduce the calculation or measurement and decide whether to implement the change. Never invent profile percentages or latency.
 - **Example:** `Illustrative UNVERIFIED DOD-003/DOD-007: load loops over M=20,000 records for each of D=200 owners (4,000,000 comparisons; O(DM)). Two-pass grouping by checked dense owner ID costs O(D+M) time and extra space. Preserve per-owner order and duplicate errors. Matched load time and peak bytes: not measured.`
 
