@@ -11,8 +11,8 @@ readme = README.read_text(encoding="utf-8")
 errors = []
 
 expected = [f"DOD-{i:03d}" for i in range(1, 34)]
-definitions = re.findall(r"^### (DOD-\\d{3}) — ", text, re.M)
-trees = re.findall(r"^### (DOD-\\d{3}) decision tree$", text, re.M)
+definitions = re.findall(r"^### (DOD-\d{3}) — ", text, re.M)
+trees = re.findall(r"^### (DOD-\d{3}) decision tree$", text, re.M)
 
 for label, actual in [("definition", definitions), ("decision tree", trees)]:
     for rule_id in expected:
@@ -40,7 +40,7 @@ for section in required_sections:
     if section not in text:
         errors.append(f"Missing required section: {section}")
 
-frontmatter = re.match(r"^---\\n(.*?)\\n---", text, re.S)
+frontmatter = re.match(r"^---\n(.*?)\n---", text, re.S)
 if not frontmatter:
     errors.append("Missing YAML frontmatter")
 else:
@@ -58,12 +58,12 @@ if tree_start == -1 or tree_end == -1 or tree_end <= tree_start:
 else:
     tree_text = text[tree_start:tree_end]
     for pattern in [
-        r"\\breused enough\\b",
-        r"\\bsparse enough\\b",
-        r"\\brare enough\\b",
-        r"\\bmuch smaller\\b",
-        r"\\bmost consumers\\b",
-        r"\\bbest measured\\b",
+        r"\breused enough\b",
+        r"\bsparse enough\b",
+        r"\brare enough\b",
+        r"\bmuch smaller\b",
+        r"\bmost consumers\b",
+        r"\bbest measured\b",
     ]:
         if re.search(pattern, tree_text, re.I):
             errors.append(f"Vague decision-tree predicate found: {pattern}")
