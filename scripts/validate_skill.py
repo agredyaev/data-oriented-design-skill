@@ -5,14 +5,31 @@ import sys
 
 ROOT = Path("skills/data-oriented-design")
 SKILL = ROOT / "SKILL.md"
-PERFORMANCE = ROOT / "references/performance-methodology.md"
 WORKFLOW = ROOT / "references/workflow.md"
+PERFORMANCE_ROUTER = ROOT / "references/performance-methodology.md"
+PERFORMANCE_DIR = ROOT / "references/performance"
 ENGINEERING_ROUTER = ROOT / "references/dod-yagni-engineering-rules.md"
+STRUCTURAL = ROOT / "references/engineering/00-structural-analysis.md"
 README = Path("README.md")
 
 errors = []
 
-for path in [SKILL, PERFORMANCE, WORKFLOW, ENGINEERING_ROUTER, README]:
+required_files = [
+    SKILL,
+    WORKFLOW,
+    PERFORMANCE_ROUTER,
+    ENGINEERING_ROUTER,
+    STRUCTURAL,
+    PERFORMANCE_DIR / "00-diagnosis.md",
+    PERFORMANCE_DIR / "01-measurement.md",
+    PERFORMANCE_DIR / "10-foundation.md",
+    PERFORMANCE_DIR / "20-identity-and-relations.md",
+    PERFORMANCE_DIR / "21-layout-and-encoding.md",
+    PERFORMANCE_DIR / "30-work-and-access.md",
+    PERFORMANCE_DIR / "40-concurrency.md",
+    README,
+]
+for path in required_files:
     if not path.is_file():
         errors.append(f"Missing required file: {path}")
 
@@ -23,10 +40,12 @@ if errors:
     sys.exit(1)
 
 skill = SKILL.read_text(encoding="utf-8")
-performance = PERFORMANCE.read_text(encoding="utf-8")
 workflow = WORKFLOW.read_text(encoding="utf-8")
+performance_router = PERFORMANCE_ROUTER.read_text(encoding="utf-8")
+structural = STRUCTURAL.read_text(encoding="utf-8")
 readme = README.read_text(encoding="utf-8")
 
+# Router must remain small and selective.
 frontmatter = re.match(r"^---\n(.*?)\n---", skill, re.S)
 if not frontmatter:
     errors.append("Missing YAML frontmatter")
@@ -39,44 +58,71 @@ else:
             errors.append(f"Frontmatter description does not cover: {term}")
 
 for section in [
-    "## Required load order",
-    "## Routing",
+    "## Choose the task mode",
+    "## Engineering routing",
+    "## Performance routing",
+    "## Primary top-down algorithm",
     "## Non-negotiable rules",
-    "## Required result",
+    "## Completion",
 ]:
     if section not in skill:
         errors.append(f"SKILL router missing section: {section}")
 
-required_paths = [
-    "references/workflow.md",
-    "references/dod-yagni-engineering-rules.md",
-    "references/performance-methodology.md",
-    "references/engineering/00-structural-analysis.md",
-    "references/engineering/01-data-shape.md",
-    "references/engineering/02-canonical-and-derived.md",
-    "references/engineering/03-hot-path-work.md",
-    "references/engineering/04-ownership-and-concurrency.md",
-    "references/engineering/05-yagni-and-cleanup.md",
-    "references/engineering/06-correctness-boundaries.md",
-    "references/engineering/07-measurement-and-review.md",
-    "references/engineering/08-examples.md",
-]
-for target in required_paths:
-    if not (ROOT / target).is_file():
-        errors.append(f"Routed file does not exist: {target}")
+if SKILL.stat().st_size > 6500:
+    errors.append(f"SKILL router is too large: {SKILL.stat().st_size} bytes")
+if PERFORMANCE_ROUTER.stat().st_size > 5000:
+    errors.append(
+        f"Performance router is too large: {PERFORMANCE_ROUTER.stat().st_size} bytes"
+    )
+if "Start with at most three references" not in skill:
+    errors.append("SKILL router does not cap initial reference loading")
+if "for every task" in skill.lower():
+    errors.append("SKILL router contains a blanket load-for-every-task rule")
+if re.search(r"^### DOD-\d{3}", performance_router, re.M):
+    errors.append("Performance router contains detailed DOD rules instead of routing")
 
-for target in [
-    "references/workflow.md",
-    "references/dod-yagni-engineering-rules.md",
-    "references/performance-methodology.md",
-    "references/engineering/00-structural-analysis.md",
+# Workflow must remain executable rather than bureaucratic.
+for phrase in [
+    "## 1. Fix the contract",
+    "## 2. Draw the current process and data",
+    "## 3. Apply the element-necessity test",
+    "## 4. Design the replacement from the contract",
+    "## 5. Compare current and candidate",
+    "## 6. Implement one structural decision at a time",
+    "## 7. Verify proportionally",
+    "every added element has a concrete responsibility",
 ]:
-    if target not in skill:
-        errors.append(f"SKILL router does not reference: {target}")
+    if phrase not in workflow:
+        errors.append(f"Workflow missing executable rule: {phrase}")
 
+if WORKFLOW.stat().st_size > 9000:
+    errors.append(f"Workflow is too large: {WORKFLOW.stat().st_size} bytes")
+if "Required output:" in workflow:
+    errors.append("Workflow contains per-phase Required output bureaucracy")
+if re.search(r"^## Phase \d", workflow, re.M):
+    errors.append("Workflow reverted to phase-heavy structure")
+for decision in ["KEEP", "REMOVE", "MERGE", "DERIVE", "LOCALIZE", "FLATTEN", "BATCH", "MEASURE"]:
+    if decision not in workflow:
+        errors.append(f"Element-necessity decision is missing: {decision}")
+
+# All directly routed files must exist.
+skill_links = re.findall(r"\((references/[^)]+\.md)\)", skill)
+for target in skill_links:
+    if not (ROOT / target).is_file():
+        errors.append(f"SKILL routed file does not exist: {target}")
+
+perf_links = re.findall(r"\((performance/[^)]+\.md)\)", performance_router)
+for target in perf_links:
+    if not (ROOT / "references" / target).is_file():
+        errors.append(f"Performance routed file does not exist: {target}")
+
+# DOD-001..033 must exist exactly once as a decision tree and once as a definition
+# across routed packs.
+rule_pack_paths = sorted(PERFORMANCE_DIR.glob("*.md"))
+performance_content = "\n".join(p.read_text(encoding="utf-8") for p in rule_pack_paths)
 expected = [f"DOD-{i:03d}" for i in range(1, 34)]
-definitions = re.findall(r"^### (DOD-\d{3}) — ", performance, re.M)
-trees = re.findall(r"^### (DOD-\d{3}) decision tree$", performance, re.M)
+definitions = re.findall(r"^### (DOD-\d{3}) — ", performance_content, re.M)
+trees = re.findall(r"^### (DOD-\d{3}) decision tree$", performance_content, re.M)
 
 for label, actual in [("definition", definitions), ("decision tree", trees)]:
     for rule_id in expected:
@@ -87,68 +133,67 @@ for label, actual in [("definition", definitions), ("decision tree", trees)]:
     if extras:
         errors.append(f"Unexpected {label} IDs: {', '.join(extras)}")
 
-required_performance_sections = [
+# Preserve the performance methodology sections from main.
+diagnosis = (PERFORMANCE_DIR / "00-diagnosis.md").read_text(encoding="utf-8")
+measurement = (PERFORMANCE_DIR / "01-measurement.md").read_text(encoding="utf-8")
+foundation = (PERFORMANCE_DIR / "10-foundation.md").read_text(encoding="utf-8")
+methodology_text = diagnosis + "\n" + measurement + "\n" + foundation
+for section in [
     "## Language rules",
     "## Core model",
+    "## Run one performance experiment",
     "## Global decision tree",
     "## Transformation map",
-    "## Decision trees for every rule",
-    "## Diagnose the work",
-    "## Prove and report",
+    "## Layout choices",
+    "## Access-order choices",
+    "## Reads, writes, and lifetime",
+    "## Concurrency gate",
+    "## Measurement rules",
+    "## Falsifiable hypothesis",
+    "## Result classes",
+    "## Code signatures",
     "## Quality gate for this skill's output",
-]
-for section in required_performance_sections:
-    if section not in performance:
+]:
+    if section not in methodology_text:
         errors.append(f"Performance methodology missing section: {section}")
 
-tree_start = performance.find("## Decision trees for every rule")
-tree_end = performance.find("## Diagnose the work")
-if tree_start == -1 or tree_end == -1 or tree_end <= tree_start:
-    errors.append("Cannot locate the decision-tree block")
-else:
-    tree_text = performance[tree_start:tree_end]
-    for pattern in [
-        r"\breused enough\b",
-        r"\bsparse enough\b",
-        r"\brare enough\b",
-        r"\bmuch smaller\b",
-        r"\bmost consumers\b",
-        r"\bbest measured\b",
-    ]:
-        if re.search(pattern, tree_text, re.I):
-            errors.append(f"Vague decision-tree predicate found: {pattern}")
+for pattern in [
+    r"\breused enough\b",
+    r"\bsparse enough\b",
+    r"\brare enough\b",
+    r"\bmuch smaller\b",
+    r"\bmost consumers\b",
+    r"\bbest measured\b",
+]:
+    if re.search(pattern, performance_content, re.I):
+        errors.append(f"Vague decision-tree predicate found: {pattern}")
 
-if "Repeated string/value storage -> DOD-022" in performance:
+if "Repeated string/value storage -> DOD-022" in performance_content:
     errors.append("DOD-022 must not route non-string canonical values")
 
-gstart = performance.find("## Global decision tree")
-gend = performance.find("## Transformation map")
-global_tree = performance[gstart:gend] if gstart >= 0 and gend > gstart else ""
+gstart = diagnosis.find("## Global decision tree")
+gend = diagnosis.find("## Transformation map")
+global_tree = diagnosis[gstart:gend] if gstart >= 0 and gend > gstart else ""
 for term in ["CORE", "FRONT END", "BRANCH", "I/O"]:
     if term not in global_tree:
         errors.append(f"Global decision tree does not route bottleneck class: {term}")
 
+# Structural route must be top-down and typed.
 for phrase in [
-    "ASCII structural map",
-    "Can this object disappear entirely?",
-    "Can this stored field or projection be derived",
-    "two consecutive local optimizations",
-]:
-    if phrase not in workflow:
-        errors.append(f"Workflow missing structural requirement: {phrase}")
-
-structural = (ROOT / "references/engineering/00-structural-analysis.md").read_text(encoding="utf-8")
-for phrase in [
-    "Draw the current state shape",
-    "Draw the candidate flat shape",
-    "Count allocation shape",
-    "Challenge every retained field",
-    "Challenge every relationship",
-    "Escalate when local tuning fails",
+    "State the exact contract",
+    "Build the current process map with data types",
+    "Build the current retained-data map",
+    "Count the current process",
+    "Identify removable work and state",
+    "Design the new process from the contract",
+    "Design the new retained representation",
+    "Compare current and candidate structurally",
+    "Only now select detailed rules",
 ]:
     if phrase not in structural:
         errors.append(f"Structural analysis missing section: {phrase}")
 
+# Markdown fences must remain balanced.
 for path in ROOT.rglob("*.md"):
     md = path.read_text(encoding="utf-8")
     if len(re.findall(r"^\x60\x60\x60", md, re.M)) % 2:
@@ -168,4 +213,7 @@ if errors:
 print("Skill validation passed.")
 print(f"Definitions: {len(definitions)}")
 print(f"Decision trees: {len(trees)}")
-print("Router references: OK")
+print(f"SKILL router bytes: {SKILL.stat().st_size}")
+print(f"Workflow bytes: {WORKFLOW.stat().st_size}")
+print(f"Performance router bytes: {PERFORMANCE_ROUTER.stat().st_size}")
+print("Initial reference cap: 3")

@@ -1,66 +1,98 @@
 # Structural Analysis
 
-Read this block before local performance tuning or architecture cleanup.
+Use this block before detailed DOD rules for any non-trivial performance or architecture problem.
 
-The purpose is to expose the current state shape before optimizing implementation details. The primary question is not "how can this object be faster?" but "does this object, relationship, stored value, pass, or boundary need to exist?"
-
-## 1. Draw the current state shape
-
-Start with one ASCII map that shows the root owner and retained state.
-
-Example:
+The required direction is:
 
 ```text
-State
-  |
-  +-- models: HashMap<Name, Arc<Model>>
-  |      |
-  |      +-- Model
-  |            |
-  |            +-- dependencies: Vec<Arc<Model>>
-  |
-  +-- runtime_cache: Mutex<...>
-  |
-  +-- work_registry: HashMap<Id, Work>
+current process
+    ↓
+current data types and ownership
+    ↓
+count steps and transformations
+    ↓
+identify removable work/state
+    ↓
+design a simpler process for the same contract
+    ↓
+choose flatter data structures
+    ↓
+only then apply detailed DOD rules
 ```
 
-Then draw the dominant execution path separately:
+Do not begin by optimizing an existing class, container, lock, cache, or loop. First decide whether that mechanism belongs in the target design.
+
+## 1. State the exact contract
+
+Write the externally observable task in one sentence:
 
 ```text
-input
-  |
-  v
-parse
-  |
-  v
-lookup
-  |
-  v
-object dispatch
-  |
-  v
-shared state
-  |
-  v
-serialize
-  |
-  v
-output
+INPUT → REQUIRED OUTPUT
 ```
 
-Annotate important nodes and edges with both work type and known scale:
+Then list only behavior that must remain invariant:
+
+- accepted inputs and bounds;
+- output values and ordering;
+- identity semantics;
+- error behavior;
+- authorization/security checks;
+- persistence/wire/ABI compatibility;
+- transaction/recovery semantics;
+- concurrency requirements;
+- explicit latency/memory/throughput budgets.
+
+Unknown requirements are `UNKNOWN`. Do not infer them.
+
+## 2. Build the current process map with data types
+
+Draw the end-to-end process from input to output. Every node must name:
+
+1. the operation;
+2. the input data type;
+3. the output data type;
+4. retained state read or written;
+5. multiplicity/call count when known.
+
+Use this format:
 
 ```text
-count
-bytes
-calls
-allocations
-pointer/ID hops
+[1] parse
+    in:  &[u8]
+    out: Ast
+    work: allocate nodes
+        |
+        v
+[2] resolve
+    in:  Ast
+    out: Vec<ResolvedObject>
+    read: HashMap<String, ObjectId>
+        |
+        v
+[3] build runtime
+    in:  Vec<ResolvedObject>
+    out: Runtime
+    write: Vec<Arc<Mutex<Object>>>
+        |
+        v
+[4] execute
+    in:  Request
+    read: Runtime
+    out: Response
+```
+
+Do not write generic boxes such as "service", "manager", or "processing" without the concrete operation and data type.
+
+For each edge annotate applicable costs:
+
+```text
 copy
-lookup
-hash
+clone
+allocate
 parse
 normalize
+hash
+lookup
 serialize
 lock
 atomic refcount
@@ -70,230 +102,291 @@ state transition
 ownership transfer
 ```
 
-Use `?` for unknown quantities. The absence of a measurement is information; do not erase the edge or cost category.
+Also annotate known quantities:
 
-Do not omit an edge because it is hidden behind a wrapper, callback, trait, helper, runtime, framework, or protocol layer.
+```text
+N items
+M edges
+K calls
+B bytes
+A allocations
+? = unknown
+```
 
-## 2. Draw the candidate flat shape
+## 3. Build the current retained-data map
 
-For each object-heavy map, attempt a representation with explicit top-level ownership.
+Draw the root owner and every retained structure used by the dominant path.
 
 Example:
 
 ```text
-State
+Runtime
   |
-  +-- models[]
-  +-- dependency_offsets[]
-  +-- dependency_ids[]
+  +-- models: HashMap<String, Arc<Model>>
+  |      |
+  |      +-- Model
+  |            +-- dependencies: Vec<Arc<Model>>
+  |            +-- flags: Vec<bool>
+  |
+  +-- cache: Mutex<HashMap<Key, Value>>
+```
+
+For every retained structure record:
+
+- owner;
+- lifetime;
+- mutable or frozen;
+- canonical or derived;
+- element count;
+- bytes if known;
+- number of independent allocations;
+- relationship representation: pointer / ID / offset / range / key;
+- dominant readers and writers.
+
+## 4. Count the current process
+
+Count the process before proposing a new design.
+
+At minimum record:
+
+```text
+process steps:
+full passes:
+lookups:
+parses:
+serializations:
+copies/clones:
+allocations:
+locks/atomic refcounts:
+IPC/protocol round-trips:
+retained representations of the same semantic data:
+```
+
+Use actual counts when available. Use symbolic counts such as `N`, `M`, `Q` when they depend on input size.
+
+This count is the structural baseline.
+
+## 5. Identify removable work and state
+
+Inspect the process map from top to bottom. For every node, edge, and retained structure ask these questions in order.
+
+### Process
+
+1. Can this step disappear while preserving the contract?
+2. Can two adjacent steps become one pass?
+3. Can several calls or round-trips become one batch?
+4. Can parse/normalize/resolve happen once instead of repeatedly?
+5. Can a lookup be replaced by an ID resolved earlier?
+6. Can temporary coordination state become local variables or scratch?
+
+### State
+
+1. Is this representation canonical or a copy of canonical data?
+2. Can this stored value be derived from canonical state?
+3. Can this build-time structure be discarded after freeze?
+4. Can sparse/optional data move out of every row?
+5. Does this cache solve measured repeated work, or hide a poor ownership/process design?
+
+### Relationships
+
+1. Does identity require a memory address?
+2. Can a pointer/reference become a typed ID?
+3. Can nested containers become one flat array plus offsets/ranges?
+4. Can repeated strings become one byte pool plus IDs/offsets?
+5. Can object polymorphism become tags plus explicit passes?
+
+Every `yes` is a candidate removal or flattening.
+
+## 6. Design the new process from the contract, not from the old classes
+
+Create a second process map that solves the same contract with the smallest explicit sequence of transformations.
+
+Do not preserve an old layer merely because the current code has it.
+
+Required form:
+
+```text
+CURRENT
+[1] A -> B
+[2] B -> C
+[3] C -> D
+[4] D -> E
+[5] E -> output
+
+CANDIDATE
+[1] A -> C
+[2] C -> E
+[3] E -> output
+```
+
+For the candidate, name exact data types again.
+
+Example:
+
+```text
+[1] admit
+    in:  &[u8]
+    out: BuildState
+
+[2] freeze
+    in:  BuildState
+    out: Runtime {
+        models: Vec<ModelRow>,
+        dependency_offsets: Vec<u32>,
+        dependency_ids: Vec<ModelId>,
+        string_bytes: Vec<u8>,
+    }
+
+[3] execute
+    in:  Request
+    read: Runtime
+    out: Response
+```
+
+The candidate must explicitly show which old steps no longer exist.
+
+## 7. Design the new retained representation
+
+Prefer a root-owned flat representation when the domain permits it.
+
+Typical target:
+
+```text
+Runtime
+  |
+  +-- entities[]
+  +-- edge_offsets[]
+  +-- edge_ids[]
   +-- string_bytes[]
+  +-- optional_payloads[]
   +-- indexes[]
 ```
 
-Relationships become values:
+Typical record:
 
 ```text
-ModelId -> models[id]
-
-dependencies(id):
-    dependency_ids[
-        dependency_offsets[id]
-        ..
-        dependency_offsets[id + 1]
-    ]
-```
-
-This mirrors the source pattern in which a root state owns backing storage while records refer to other data through compact handles, offsets, ranges, or IDs rather than per-object ownership.
-
-The target is not "zero pointers everywhere." The target is to remove pointer identity, nested allocation, and ownership edges from ordinary retained domain relationships when those properties are not required by the contract.
-
-## 3. Count allocation shape
-
-Do not count only payload bytes. Count independent allocations and ownership nodes.
-
-Example:
-
-```text
-before
-------
-N entity allocations
-N child-vector allocations
-S string allocations
-M Arc control blocks
-L lock objects
-
-after
------
-entities[]
-children[]
-string_bytes[]
-indexes[]
-```
-
-Record:
-
-- number of independent allocations;
-- allocator metadata and capacity overhead where relevant;
-- number of pointer/reference hops in the dominant pass;
-- number of atomic reference-count operations;
-- number of locks or shared-mutation points;
-- number of containers that require separate destruction or invalidation.
-
-A flat representation can be valuable even when the sum of field widths is similar because it changes allocation count, locality, traversal, and ownership complexity.
-
-## 4. Challenge every retained field
-
-For each stored field ask:
-
-> Is this authoritative state, or a deterministic function of authoritative state?
-
-If it is derived, compare storing it with recomputing it.
-
-```text
-stored:
-Token {
-    start
-    end
-    line
-    column
+EntityRow {
+    name: StringId,
+    edges: Range,
+    tag: EntityKind,
 }
-
-candidate:
-Token {
-    start
-    kind
-}
-
-source[]
-line_starts[]
-
-end    = derive(start, kind)
-line   = derive(line_starts, start)
-column = derive(line_starts, start)
 ```
 
-Prefer derive-over-store when recomputation fits the read-path budget and removes retained bytes, invalidation, synchronization, or update bookkeeping.
+Use:
 
-Keep the value stored when it has independent snapshot/history semantics, a compatibility contract requires it, required inputs will be discarded, or measured recomputation violates the budget.
+- typed IDs for stable bounded identity;
+- contiguous arrays for frequently traversed data;
+- offsets/ranges for one-to-many relations;
+- side arrays for sparse or optional payload;
+- tags/encodings instead of per-object subtype allocation;
+- one canonical state plus indexes/views;
+- derived values instead of stored copies when recomputation fits the budget;
+- operation-local scratch for temporary work.
 
-## 5. Challenge every relationship
+Do not force any of these when mutation, ABI, concurrency, lifetime, or measured workload makes another representation better.
 
-For each relationship ask in order:
+## 8. Compare current and candidate structurally
 
-1. Does identity need to be a memory address?
-2. Can the relationship be a typed ID or handle?
-3. Can nested collections become one flat array plus offset/length or offsets?
-4. Can repeated strings become one byte pool plus interned handles?
-5. Can sparse payload move to side storage?
-6. Can membership encode state out of band instead of a field in every row?
-7. Can variant behavior become tags plus explicit passes instead of object polymorphism?
-8. Can a map used during construction disappear after freeze?
+Produce this table before implementation:
 
-Do not apply these mechanically. Mutation pattern, stable identity, bounds, output order, concurrency, ABI/wire contracts, and workload decide whether the transformation is valid.
+| Metric | Current | Candidate | Delta |
+| --- | ---: | ---: | ---: |
+| process steps | | | |
+| full passes | | | |
+| retained canonical representations | | | |
+| derived retained copies | | | |
+| independent allocations | | | |
+| pointer/reference hops on dominant path | | | |
+| lookups | | | |
+| parse/normalize operations | | | |
+| copies/clones | | | |
+| locks/refcount operations | | | |
+| IPC/protocol round-trips | | | |
+| retained bytes | | | |
 
-## 6. Challenge every layer and boundary
+If a value is unknown, write `?`. Do not invent an improvement.
 
-For each wrapper, service, registry, callback chain, process hop, protocol call, or state machine transition ask:
+A structural candidate is preferred when it preserves the contract and removes steps, state, relationships, or recurring work without introducing more expensive invariants elsewhere.
 
-- What concrete contract responsibility does it own?
-- Could its caller work directly with the underlying canonical data?
-- Could several calls become one batch?
-- Could several state transitions become one explicit pass?
-- Could temporary coordination state become local scratch?
-- Could a runtime object exist only during build/admission?
+## 9. Only now select detailed rules
 
-If removal preserves the contract, prefer removing the mechanism to optimizing its implementation.
+After the candidate process and data model exist, use the detailed DOD/YAGNI rule packs to answer implementation questions:
 
-## 7. Compare structural alternatives before micro-tuning
+- exact ID width and bounds;
+- AoS vs SoA vs AoSoA;
+- packing and padding;
+- indexing;
+- sparse side storage;
+- pass fusion/fission;
+- blocking/clustering;
+- concurrency partitioning;
+- benchmark design;
+- correctness gates.
 
-Before changing a local mechanism, write at least these alternatives when applicable:
+Detailed rules refine the new design. They do not substitute for creating it.
 
-```text
-A. keep current representation and tune implementation
-B. flatten ownership / replace pointers with IDs
-C. remove duplicated or derived state
-D. collapse passes / calls / round-trips
-E. move temporary structures to build/request scope
-```
-
-Estimate for each:
-
-- recurring work removed;
-- retained state removed;
-- new state introduced;
-- new invariants introduced;
-- build/update cost;
-- query/traversal cost;
-- expected effect on the end-to-end target.
-
-Do not choose A merely because it requires the smallest code edit.
-
-## 8. Escalate when local tuning fails
+## 10. Reject ineffective local tuning
 
 Track:
 
 ```text
-local physical metric
-        |
-        v
-component / phase wall
-        |
-        v
+local metric
+    ↓
+component wall time
+    ↓
 end-to-end target
 ```
 
-A local improvement is not a system improvement.
+If a local optimization improves only the first level and does not materially improve the end-to-end target, do not treat it as success.
 
-If a local change improves allocations, lookup cost, lock time, or a component microbenchmark but does not materially move the end-to-end target, re-rank the system.
-
-If two consecutive local changes on the same representation fail to move the end-to-end target beyond noise or toward the stated budget:
+If two consecutive local changes on the same representation fail to move the end-to-end target:
 
 1. stop tuning that representation;
-2. redraw the ASCII structure;
-3. identify the next removable object, state copy, pass, transition, boundary, or round-trip;
-4. produce a structural candidate before another micro-optimization.
+2. return to Sections 2–8;
+3. redraw the current process;
+4. produce another structural candidate;
+5. continue local tuning only if evidence still identifies that component as material.
 
-Continue local tuning only when evidence still shows that component is a material contributor.
+## Required output
 
-## 9. Required structural output
-
-Before implementation, record:
+Before implementation or a final architecture recommendation, provide:
 
 ```text
-CURRENT ASCII MAP
+CONTRACT
 ...
 
-CANDIDATE ASCII MAP
-...
+CURRENT PROCESS
+[typed ASCII process map]
 
-REMOVED
-- objects:
-- allocations:
-- retained fields:
-- passes:
-- lookups:
-- locks:
-- round-trips:
+CURRENT DATA
+[typed ASCII retained-data map]
 
-ADDED
-- arrays/indexes:
-- build work:
-- update work:
-- invariants:
+CURRENT COUNTS
+steps:
+passes:
+allocations:
+lookups:
+copies:
+locks:
+round-trips:
+retained representations:
 
-STORE -> DERIVE
+REMOVABLE
 - ...
 
-POINTER/OBJECT -> ID/RANGE
-- ...
+CANDIDATE PROCESS
+[typed ASCII process map]
 
-EXPECTED TARGET EFFECT
-- local:
-- phase:
-- end-to-end:
+CANDIDATE DATA
+[flat retained-data map]
 
-EVIDENCE NEEDED
+STRUCTURAL DELTA
+[comparison table]
+
+DETAILED RULES NEEDED NEXT
+- DOD-...
+- engineering/...
+
+EVIDENCE REQUIRED
 - ...
 ```
-
-If there is no plausible structural simplification, state why and then proceed to local layout or hot-path tuning.
