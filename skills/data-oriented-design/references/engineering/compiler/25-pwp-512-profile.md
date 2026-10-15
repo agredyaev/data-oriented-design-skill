@@ -2,18 +2,15 @@
 
 Use this optional profile when the task explicitly selects a 512-byte frontend or the diagnosed lexical bottleneck warrants testing it. Use [Pointerless state](30-pointerless-state.md) independently for PWP ownership/data design. PWP does not prescribe a tokenizer width.
 
-## Sources and scope
+## Applicability
 
-- PWP: Andrew Kelley's [Programming without pointers](https://www.hytradboi.com/2025/05c72e39-c07e-41bc-ac40-85e8308f2917-programming-without-pointers).
-- Wide frontend mechanisms: Validark's [Accelerated-Zig-Parser source](https://github.com/Validark/Accelerated-Zig-Parser/blob/8782a1924573641dc1f4a146afd530bf47838987/src/main.zig), inspected at commit `8782a1924573641dc1f4a146afd530bf47838987`. Relevant symbols include `Tokenizer`, `U512_IMPL`, `classifier_strategy`, `Operators`, and `Keywords`.
-
-The source supports several vector shapes; its inspected defaults are 64 bytes. The 512-byte shape is an explicitly selectable profile here, not a claim that every tokenizer or current upstream default uses it. These instructions adapt the techniques to the task's grammar; do not copy Zig keyword/operator tables into another language.
+Apply each technique to the task's grammar and access pattern. Use the 512-byte contract only when explicitly selected or justified by a measured lexical cost. Derive operator and keyword lookup from the actual grammar; do not reuse another language's tables or hash assumptions.
 
 ## Apply PWP independently
 
 PWP applies to retained data beyond compiler frontends. Use [Data shape](../01-data-shape.md), [Canonical state](../02-canonical-and-derived.md), and [Ownership](../04-ownership-and-concurrency.md) for general code. Use [Pointerless compiler state](30-pointerless-state.md) only for compiler-specific detail. No 512-byte classifier is required.
 
-Preserve the original goals: low retained memory/cache traffic, explicit memory ownership, and serialization-friendly data. Select typed IDs/offsets/ranges, dense root-owned records, compact flags/side payloads, and derivation of deterministic values only where the contract and access pattern permit them. Address-independent data still requires bounds, version, identity, and wire validation before serialization or loading.
+Target: low retained memory/cache traffic, explicit memory ownership, and serialization-friendly data. Select typed IDs/offsets/ranges, dense root-owned records, compact flags/side payloads, and derivation of deterministic values only where the contract and access pattern permit them. Address-independent data still requires bounds, version, identity, and wire validation before serialization or loading.
 
 ## Inputs and result
 
