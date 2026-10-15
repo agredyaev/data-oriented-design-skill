@@ -242,6 +242,18 @@ for phrase in [
     if phrase not in compiler_module:
         errors.append(f"Compiler methodology coverage missing: {phrase}")
 
+# Compiler module must remain methodology-focused rather than project-specific.
+for forbidden in [
+    "MeshIR ≈",
+    "MeshSema",
+    "CanonicalMesh",
+    "model_ranges[]",
+    "model_roots[]",
+    "Duck Mesh reference design",
+]:
+    if forbidden in compiler_module:
+        errors.append(f"Compiler module contains project-specific detail: {forbidden}")
+
 # Markdown fences must remain balanced.
 for path in ROOT.rglob("*.md"):
     md = path.read_text(encoding="utf-8")
