@@ -170,13 +170,13 @@ remove/fuse representations that add no required information
   ↓
 replace unjustified long-lived pointer/key topology
   ↓
-pool/resolve identity where justified
+pool/resolve identity when required or selected by measurement
   ↓
 inspect hot lexical scan
   ↓
-test wide classification only if it is material
+test wide classification only when profiling selects lexical scanning
   ↓
-test batch event extraction only if it is material
+test batch event extraction only when profiling selects extraction
   ↓
 remove staging tree when it has no independent consumer
   ↓
@@ -186,7 +186,7 @@ semantic correctness gate
   ↓
 representative measurement gate
   ↓
-keep only justified complexity
+keep only added structure with a named responsibility and passed budget
 ```
 
 ## 8. Generic target architecture
