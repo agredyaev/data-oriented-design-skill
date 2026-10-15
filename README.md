@@ -1,29 +1,63 @@
 # Data-Oriented Design Skill
 
-A language-independent guide for diagnosing data-oriented performance problems and selecting a measured redesign.
+A language-independent skill for diagnosing data-oriented performance problems and designing simpler, measurable architectures.
 
-The skill uses progressive disclosure. `SKILL.md` routes each task to the required workflow and rule blocks. The performance methodology uses this staged method:
+The skill uses progressive disclosure. `SKILL.md` routes each task to the smallest relevant workflow or rule block instead of loading the full methodology.
 
-- freeze the workload;
-- test scaling;
-- find the hotspot;
-- classify the bottleneck;
-- record the access pattern;
-- select the smallest targeted transformation;
-- write a falsifiable prediction;
-- validate the predicted physical metric;
-- validate phase time, total time, memory, and correctness.
+## Core workflow
 
-It covers AoS, SoA, AoSoA, typed IDs, flat relations, side storage, string and canonical-value interning, access-order changes, packing, indexing, serialization, allocation lifetime, concurrency, and a compiler-specific wide/pointerless frontend module covering batch classification, compact token streams, pointerless parsing, direct IR emission, and canonical production paths.
+For non-trivial architecture or performance work:
 
-Each rule `DOD-001` through `DOD-033` has its own decision tree. The skill also contains one global diagnostic decision tree.
+1. define the contract;
+2. draw the current typed process and retained data;
+3. count passes, lookups, parsing, copies, allocations, synchronization, and duplicate state;
+4. remove unnecessary work or representations before tuning them;
+5. design a simpler candidate from the contract;
+6. select the relevant DOD rules;
+7. validate correctness and the claimed physical/performance effect.
 
-The writing rules use Simplified Technical English style: active voice, short procedural sentences, stable terminology, and explicit conditions. The skill does not claim certified ASD-STE100 compliance.
+The performance methodology covers workload definition, scaling checks, hotspot diagnosis, access patterns, falsifiable hypotheses, matched benchmarks, and causal acceptance.
 
-Skill router: `skills/data-oriented-design/SKILL.md`.\n\nDetailed material:\n\n- workflow: `skills/data-oriented-design/references/workflow.md`;\n- performance methodology and `DOD-001` through `DOD-033`: `skills/data-oriented-design/references/performance-methodology.md`;\n- engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`;\n- structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`;\n- focused engineering blocks: `skills/data-oriented-design/references/engineering/`;\n- wide/pointerless compiler module: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`.
+## Coverage
 
-To install in Codex, copy `skills/data-oriented-design` into `~/.codex/skills/`.
-To install in Claude Code, copy the same directory into `~/.claude/skills/` or a project's `.claude/skills/`, then invoke `/data-oriented-design`.
-For claude.ai, put `data-oriented-design/` at the top of a ZIP and upload it in Customize > Skills.
+The skill covers:
 
-Rule IDs `DOD-001` through `DOD-023` remain stable. New rules `DOD-024` through `DOD-033` extend the quality gate without renumbering existing rules.
+- AoS, SoA, and AoSoA;
+- typed IDs and pointer-free frozen data;
+- flat relations, ranges, CSR, and side storage;
+- canonical and derived state;
+- string and canonical-value interning;
+- hot/cold splits and compact encodings;
+- pass fusion, fission, blocking, and clustering;
+- allocation lifetime and preallocation;
+- serialization and indexing;
+- concurrency ownership and sharding;
+- YAGNI and architecture cleanup;
+- correctness-preserving structural refactoring.
+
+A compiler-specific module also covers wide classification, compact token streams, pointerless parsing, direct IR emission, intermediate-representation elimination, and canonical production paths.
+
+## Files
+
+- Skill router: `skills/data-oriented-design/SKILL.md`
+- Workflow: `skills/data-oriented-design/references/workflow.md`
+- Performance router: `skills/data-oriented-design/references/performance-methodology.md`
+- Engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`
+- Structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`
+- Wide/pointerless compiler module: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`
+- Focused engineering blocks: `skills/data-oriented-design/references/engineering/`
+- Performance rule packs: `skills/data-oriented-design/references/performance/`
+
+## Rule IDs
+
+Each performance rule `DOD-001` through `DOD-033` has one decision tree and one rule definition.
+
+Rule IDs `DOD-001` through `DOD-023` remain stable. Rules `DOD-024` through `DOD-033` extend the methodology without renumbering the original set.
+
+## Installation
+
+For Codex, copy `skills/data-oriented-design` into `~/.codex/skills/`.
+
+For Claude Code, copy the same directory into `~/.claude/skills/` or a project's `.claude/skills/`, then invoke `/data-oriented-design`.
+
+For claude.ai, place `data-oriented-design/` at the top level of a ZIP and upload it in Customize > Skills.
