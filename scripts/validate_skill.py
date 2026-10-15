@@ -180,6 +180,19 @@ def validate(repo):
         for block in blocks:
             if documents[block].count('## Decision tree') != 1:
                 errors.append(f'Compiler block requires one primary decision tree: {block.name}')
+    profile_dir = root / 'references/engineering/compiler/profile'
+    for block in sorted(profile_dir.glob('*.md')):
+        text = documents[block.resolve()]
+        decisions = re.split(r'(?=^## Decision tree:)', text, flags=re.M)[1:]
+        if not decisions:
+            errors.append(f'Decision block has no decision trees: {block.name}')
+        for decision in decisions:
+            title = decision.splitlines()[0]
+            body = re.search(r'^```[^\n]*\n(.*?)^```', decision, re.M | re.S)
+            if not body or not body.group(1).strip():
+                errors.append(f'Decision block has empty tree: {block.name}: {title}')
+            if not re.search(r'^### Example:', decision, re.M):
+                errors.append(f'Decision tree lacks a worked example: {block.name}: {title}')
     return errors
 
 

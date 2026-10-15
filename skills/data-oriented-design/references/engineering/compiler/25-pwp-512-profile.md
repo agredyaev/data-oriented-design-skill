@@ -1,66 +1,32 @@
-# PWP and 512-Byte Frontend Profile
+# PWP / 512 Decision Router
 
-Use this optional profile when the task explicitly selects a 512-byte frontend or the diagnosed lexical bottleneck warrants testing it. Use [Pointerless state](30-pointerless-state.md) independently for PWP ownership/data design. PWP does not prescribe a tokenizer width.
-
-## Applicability
-
-Apply each technique to the task's grammar and access pattern. Use the 512-byte contract only when explicitly selected or justified by a measured lexical cost. Derive operator and keyword lookup from the actual grammar; do not reuse another language's tables or hash assumptions.
-
-## Apply PWP independently
-
-PWP applies to retained data beyond compiler frontends. Use [Data shape](../01-data-shape.md), [Canonical state](../02-canonical-and-derived.md), and [Ownership](../04-ownership-and-concurrency.md) for general code. Use [Pointerless compiler state](30-pointerless-state.md) only for compiler-specific detail. No 512-byte classifier is required.
-
-Target: low retained memory/cache traffic, explicit memory ownership, and serialization-friendly data. Select typed IDs/offsets/ranges, dense root-owned records, compact flags/side payloads, and derivation of deterministic values only where the contract and access pattern permit them. Address-independent data still requires bounds, version, identity, and wire validation before serialization or loading.
-
-## Inputs and result
-
-Inputs: selected logical batch contract, source lifetime, grammar/lexical rules, target machines, profile/budget when claiming speed.
-
-Result: classifier/compactor candidate or decision that preserves the parser contract, plus the correctness and measurement evidence applicable to the claim. No AST/IR redesign is required for a classifier-only experiment.
+Choose one question below. Each block contains decision trees, concrete before/after examples, rejection cases, and acceptance checks. Do not load the entire profile by default.
 
 ## Decision tree
 
 ```text
-512-byte contract explicitly selected?
-  YES -> preserve 512 source bytes + 8 u64 lanes per class mask.
-  NO  -> test this profile only if measured lexical cost selects it.
-Missing grammar/boundary semantics?
-  YES -> establish them before replacing classification.
-Measured cause?
-  classification -> compare global and on-demand class masks.
-  event extraction -> compare batched compaction with scalar extraction.
-  lexical lookup -> test compact operator/keyword lookup.
-  retained parser state -> use Pointerless state.
-Validate semantics and the claimed metric.
-Reprofile; keep only the result supported by evidence.
+What decision must be made?
+  owner / pointer / retained field -> PWP retained-state block
+  batch width / backend / lexical masks -> batch and classification block
+  scalar mask extraction -> compaction block
+  operator / keyword dispatch -> lexical lookup block
+  token positions / trivia / AST-to-IR -> token stream block
+Question spans several blocks?
+  inspect the primary cause first; load the next block only for its missing input.
+No code, contract, or measurement selects a branch?
+  identify the missing fact; do not choose a representation from the label PWP/512.
 ```
 
-## Logical contract and interchangeable backends
+## Select a decision block
 
-One logical input batch contains up to 512 valid source bytes. Each lexical class mask has 512 bits represented as 8 lanes of `u64`; mask bit i corresponds to source byte i. Define valid-byte masking, lane order, bit order, tail handling, and carry state before implementing a backend.
-
-512 bytes is not a 512-bit hardware vector. A backend can process multiple smaller vectors or scalar/SWAR chunks while preserving the logical mask and parser-facing contract. Select AVX-512/BMI2, NEON, portable SWAR, or scalar mechanisms only where supported. Replacing a classifier/compactor backend must not require changing the parser.
-
-Do not silently replace a selected 512-byte contract with a 64-byte contract merely because a machine has a different ISA. Backend parity is a semantic requirement; equivalent speed across machines is not assumed.
-
-## Techniques that may be applied separately
-
-| Technique | Candidate mechanism | Required checks |
+| Decision | Read | Minimum input |
 | --- | --- | --- |
-| Wide classification | produce class masks for a logical batch, then combine masks rather than branch per byte | valid tails, non-ASCII handling, strings/comments/escapes |
-| Boundary algebra | derive start/end events from adjacent class bits and carried lexical state | carry across 64-bit lanes and 512-byte batches; tokens longer than one batch |
-| Batch extraction | compact selected tags/positions in groups instead of a dependent trailing-zero loop | event count/order, empty/full masks, output capacity; keep a scalar oracle |
-| On-demand classification | compute only class information needed by the current lexical operation; compare with a global classifier | identical class semantics and contextual exclusions; benchmark both strategies |
-| Compact operator lookup | bounded candidate encoding/hash and dense lookup for the grammar's operator set | longest-match rules, prefixes, unknown operators, collisions, bounds and endianness |
-| Dense keyword lookup | compact byte pool plus offsets/lengths and bounded candidate lookup | verify candidate length/content; identifiers sharing a hash must remain identifiers |
-| Compact parser stream | emit tags plus extents; fold insignificant whitespace/comments only when semantics permit | source reconstruction for diagnostics, required comments, trailing trivia, long extent encoding |
-| Pointerless parsing/direct emission | use local indices/scratch and emit the required semantic representation directly | keep staging representations with named consumers; preserve errors/order and fail closed |
+| Preserve 512 on another ISA; global vs on-demand classification; lane/batch carry | [Batch contract and classification](profile/10-batch-and-classification.md) | batch contract, grammar, target machines; timing for cost choices |
+| Replace a trailing-zero loop with batch extraction | [Mask compaction](profile/20-mask-compaction.md) | mask/event ordering, output contract, profile or cost target |
+| Replace operator branches or string-keyword searches | [Lexical lookup](profile/30-lexical-lookup.md) | complete grammar vocabulary, equality and longest-match rules |
+| Drop start/end arrays, fold trivia, or emit IR directly | [Token stream and direct emission](profile/40-token-stream.md) | token consumers, source lifetime, diagnostic/trivia requirements |
+| Replace pointers, flatten children, derive fields, or discard builders | [PWP retained state](profile/50-pwp-retained-state.md) | owners/lifetimes, mutation, consumers, affected contract |
 
-A hash or compact tag is not proof of token equality. Preserve original bytes or another sufficient representation until all required checks finish. Do not allow invalid inputs to alias a valid operator or keyword.
+PWP can be applied without a lexer. A selected 512-byte input block has 512 source bytes and 8×u64 per class mask; it is not a 512-bit instruction requirement.
 
-## Connect to the existing modules
-
-Use [Wide frontend](20-wide-frontend.md) for mask algebra, compact extents, and direct parsing; [Pointerless state](30-pointerless-state.md) for IDs/offsets/ranges and frozen data; [Pipeline elimination](10-pipeline-elimination.md) when an intermediate representation has no required consumer; and [Compiler validation](40-validation.md) before acceptance.
-
-For the profiler route, select only the technique matching the measured cause, change one mechanism, then measure and rerank. For a broad redesign, use the structural route. Follow [Module composition](../../modules.md#choose-and-switch-routes) and shared [Reporting](../../workflow.md#proportional-result-format). A width/ISA choice alone proves no speedup.
-
+Use [Route selection](../../modules.md#choose-and-switch-routes) for structural or profiler-led execution. Apply [Compiler validation](40-validation.md) when compiler behavior changes and [Workflow reporting](../../workflow.md#proportional-result-format) to the selected result only.

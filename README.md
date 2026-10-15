@@ -39,7 +39,7 @@ The skill covers:
 - YAGNI and architecture cleanup;
 - correctness-preserving structural refactoring.
 
-A compiler-specific module also covers wide classification, compact token streams, pointerless parsing, direct IR emission, intermediate-representation elimination, and canonical production paths.
+A compiler-specific module also covers wide classification, compact token streams, pointerless parsing, direct IR emission, intermediate-representation elimination, and canonical production paths. The PWP/512 router selects five independent decision blocks: batch/classification, compaction, lexical lookup, token streams/direct emission, and retained state. Each decision tree includes a worked example and rejection conditions.
 
 ## Files
 

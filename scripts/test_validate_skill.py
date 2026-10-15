@@ -77,6 +77,24 @@ class ValidateSkillTests(unittest.TestCase):
         path.write_text(text[:start] + text[end:])
         self.assert_invalid('DOD-001: missing nonempty decision tree body')
 
+    def test_profile_tree_requires_a_worked_example(self):
+        path = self.skill / 'references/engineering/compiler/profile/10-batch-and-classification.md'
+        path.write_text(path.read_text().replace('### Example:', '### Illustration:', 1))
+        self.assert_invalid('Decision tree lacks a worked example')
+
+    def test_profile_requires_decision_trees(self):
+        path = self.skill / 'references/engineering/compiler/profile/10-batch-and-classification.md'
+        path.write_text(path.read_text().replace('## Decision tree:', '## General advice:'))
+        self.assert_invalid('Decision block has no decision trees')
+
+    def test_profile_tree_cannot_be_empty(self):
+        path = self.skill / 'references/engineering/compiler/profile/10-batch-and-classification.md'
+        text = path.read_text()
+        start = text.index('```text') + len('```text\n')
+        end = text.index('```', start)
+        path.write_text(text[:start] + text[end:])
+        self.assert_invalid('Decision block has empty tree')
+
     def test_external_links_and_fenced_examples_are_not_local_routes(self):
         self.append('references/modules.md', '[docs](https://example.org/manual.md)\n'
                     '```text\n[illustration](nonexistent.md)\n`also-not-a-route.md`\n```')
