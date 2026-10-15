@@ -197,7 +197,26 @@ def validate(repo):
         if 'trusted profile or supplied measured cause' not in modules:
             errors.append('Module routes must include trusted-profile direct routing')
     measurement = root / 'references/performance/01-measurement.md'
-    if measurement in documents and re.search(r'^## Language rules    structural = root / 'references/engineering/00-structural-analysis.md'
+    if measurement in documents and re.search(
+        r'^## Language rules$', documents[measurement], re.M
+    ):
+        errors.append('Performance measurement must not contain output-style language rules')
+    for relative in GENERAL_DECISION_BLOCKS:
+        path = root / relative
+        if path not in documents:
+            continue
+        sections = decision_sections(documents[path])
+        if not sections:
+            errors.append(f'General engineering block has no decision trees: {relative}')
+            continue
+        for section in sections:
+            title = section.splitlines()[0]
+            body = re.search(r'^\x60\x60\x60[^\n]*\n(.*?)^\x60\x60\x60', section, re.M | re.S)
+            if not body or not body.group(1).strip():
+                errors.append(f'General decision tree is empty: {relative}: {title}')
+            if not re.search(r'^### Example:', section, re.M):
+                errors.append(f'General decision tree lacks a worked example: {relative}: {title}')
+    structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')
     compiler_router = root / 'references/engineering/09-wide-pointerless-compiler.md'
