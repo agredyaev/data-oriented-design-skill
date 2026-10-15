@@ -1,8 +1,12 @@
 # Pointerless Compiler State
 
-Use this block for long-lived compiler state. Typical signals are pointer graphs, nested containers, per-string ownership, repeated identity resolution, wide hot records, or retained builder machinery.
+Use this block for long-lived compiler state.
 
-The rule is not "no pointers". Use the simplest representation that satisfies ownership and access requirements. Apply the declared cost budget. If cost is unknown, use `MEASURE`.
+Typical signals are pointer graphs, nested containers, per-string ownership, repeated identity resolution, wide hot records, or retained builder machinery.
+
+The rule is not "no pointers". Use the simplest representation that satisfies ownership and access requirements.
+
+Apply the declared cost budget. If cost is unknown, use `MEASURE`.
 
 ## Decision tree
 
@@ -147,7 +151,9 @@ typed identity
 
 Do not repeat normalize/hash/lookup solely because later stages use different wrappers.
 
-Intentional recomputation is valid only when the contract permits it and matched evidence favors recomputation over retention. Include memory, lifetime, and synchronization cost in that comparison.
+Intentional recomputation is valid only when the contract permits it and matched evidence favors recomputation over retention.
+
+Include memory, lifetime, and synchronization cost in that comparison.
 
 Make that trade-off explicit.
 
