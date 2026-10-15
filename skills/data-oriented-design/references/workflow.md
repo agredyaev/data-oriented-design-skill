@@ -1,6 +1,6 @@
 # Data-Oriented Design Workflow
 
-Use [Module composition](modules.md) for scoped modules or profiler execution. The steps below describe a full structural redesign; verification/reporting apply to any route. Reuse evidence, execute missing prerequisites only, and do not claim skipped verification passed.
+Use [Broad redesign](broad-redesign.md) for repository/module replacement. This workflow covers scoped structural work and shared verification/reporting.
 
 For a local fix with no representation, ownership, or boundary change, state affected behavior, make the fix, and verify it. No process map is required.
 
@@ -91,9 +91,9 @@ Do not require documentation for elements already obvious from the code and cont
 
 ## 4. Design the replacement from the contract
 
-Create the candidate from required transformations, not from the old class/entity model.
+Create the candidate from required transformations, not the old class/entity model. For broad replacement use [Broad redesign](broad-redesign.md).
 
-For a broad redesign, write the candidate passes first. For each pass name the iterated set, fields/streams read, fields/streams written, order, and lifetime:
+For this scope, write candidate passes first. Name iterated set, fields/streams read/written, order, and lifetime:
 
 ```text
 admit(source)                   -> names[], raw_edges[]

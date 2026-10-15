@@ -36,8 +36,8 @@ Choose from the question and evidence. Do not run Diagnosis merely because a per
 
 | Situation | Start | Next |
 | --- | --- | --- |
-| broad non-compiler redesign or unclear state/ownership | structural route | map contract/process/data → necessity → candidate |
-| broad compiler/frontend redesign | compiler structural route | contract → affected map → pipeline elimination → first relevant compiler specialization |
+| broad repo/module redesign or OOP/slop cleanup | [Broad redesign](broad-redesign.md) | current → flat target → abstraction veto → direct replacement → profile/tune |
+| broad compiler/frontend redesign | [Broad redesign](broad-redesign.md) | map required passes first; specialize compiler/512 only when selected |
 | performance target with missing/unreliable profile | Diagnosis | establish baseline/attribution → selected rule family |
 | trusted profile or supplied measured cause | profiler route | rank measured costs → inspect selected path → matching rule/module |
 | supplied claim to verify | Experiment + Correctness | add Diagnosis only if causal evidence is missing |
@@ -45,6 +45,8 @@ Choose from the question and evidence. Do not run Diagnosis merely because a per
 | evidence insufficient to choose | smallest missing-input module | inspect/measure the disputed fact; do not invent a ranking |
 
 ### Structural route
+
+Use this for scoped structural work; broad replacement uses [Broad redesign](broad-redesign.md).
 
 `Contract → Process/data map → Necessity → selected representation/ownership/work module → candidate comparison → Implementation/Correctness → Experiment only for claimed cost results.`
 

@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 SKILL_PATH = Path('skills/data-oriented-design')
 REQUIRED = (
     'SKILL.md', 'references/workflow.md', 'references/modules.md',
+    'references/broad-redesign.md',
     'references/dod-yagni-engineering-rules.md',
     'references/engineering/00-structural-analysis.md',
     'references/engineering/09-wide-pointerless-compiler.md',
@@ -238,9 +239,46 @@ def validate(repo):
         if signature and 'DOD-024' not in signature:
             errors.append('Repeated-pass code signature must route to DOD-024')
 
-    workflow = root / 'references/workflow.md'
-    if workflow in documents and 'entity-shaped state is only an intermediate simplification' not in documents[workflow]:
-        errors.append('Broad redesign must reject entity-to-record rewrites as a final DOD design')
+    broad = root / 'references/broad-redesign.md'
+    if broad in documents:
+        broad_text = documents[broad]
+        required_broad = (
+            '## Stage 1 — Reconstruct current system',
+            '## Stage 2 — Synthesize required work with the old architecture erased',
+            '## Stage 3 — Build the flat DOD/PWP state',
+            '## Stage 4 — Abstraction veto',
+            '## Stage 5 — Anti-slop gate before coding',
+            '## Stage 6 — Implement vertical replacement slices',
+            '## Stage 7 — Profile and tune',
+            '## Stage 8 — 512 gate',
+            '## Completion gate',
+        )
+        for heading in required_broad:
+            if heading not in broad_text:
+                errors.append(f'Broad redesign missing executable gate: {heading}')
+        for invariant in (
+            'Do not stop at `Class -> Row + IDs`',
+            'Do not create a shadow architecture beside the old one.',
+            'A broad redesign cannot finish with migration adapters, dual state, or two production paths.',
+            '512 is a specialized wide-frontend technique, not a general DOD target.',
+            'Line count is not the sole metric, but a broad redesign that mostly adds production code',
+        ):
+            if invariant not in broad_text:
+                errors.append(f'Broad redesign missing anti-slop invariant: {invariant}')
+        if 'engineering/compiler/profile/50-pwp-retained-state.md' not in broad_text:
+            errors.append('Broad redesign must integrate the PWP retained-state gate')
+        if 'engineering/compiler/25-pwp-512-profile.md' not in broad_text:
+            errors.append('Broad redesign must integrate the conditional 512 gate')
+        if 'performance/00-diagnosis.md' not in broad_text:
+            errors.append('Broad redesign must integrate profiling/diagnosis')
+
+    broad_row = next(
+        (line for line in router.splitlines()
+         if 'Broad repo/module redesign or OOP cleanup' in line),
+        '',
+    )
+    if 'references/broad-redesign.md' not in broad_row:
+        errors.append('Broad repo redesign must start from the dedicated broad-redesign route')
 
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):

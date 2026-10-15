@@ -182,14 +182,49 @@ class ValidateSkillTests(unittest.TestCase):
         self.assert_invalid('PWP retained-state block requires a concrete Rust code example')
 
 
-    def test_broad_redesign_requires_pass_first_dod(self):
-        path = self.skill / 'references/workflow.md'
+    def test_broad_redesign_route_is_dedicated(self):
+        path = self.skill / 'SKILL.md'
         text = path.read_text()
+        line = next(line for line in text.splitlines()
+                    if 'Broad repo/module redesign or OOP cleanup' in line)
         path.write_text(text.replace(
-            'entity-shaped state is only an intermediate simplification',
-            'entity-shaped state can be the final redesign',
+            line,
+            line.replace('[broad redesign](references/broad-redesign.md)',
+                         '[workflow](references/workflow.md)'),
         ))
-        self.assert_invalid('Broad redesign must reject entity-to-record rewrites as a final DOD design')
+        self.assert_invalid('Broad repo redesign must start from the dedicated broad-redesign route')
+
+    def test_broad_redesign_requires_anti_slop_gate(self):
+        path = self.skill / 'references/broad-redesign.md'
+        path.write_text(path.read_text().replace(
+            '## Stage 5 — Anti-slop gate before coding',
+            '## Stage 5 — Candidate review',
+        ))
+        self.assert_invalid('Broad redesign missing executable gate')
+
+    def test_broad_redesign_rejects_shadow_architecture(self):
+        path = self.skill / 'references/broad-redesign.md'
+        path.write_text(path.read_text().replace(
+            'Do not create a shadow architecture beside the old one.',
+            'A shadow architecture is acceptable during migration.',
+        ))
+        self.assert_invalid('Broad redesign missing anti-slop invariant')
+
+    def test_broad_redesign_requires_pwp_gate(self):
+        path = self.skill / 'references/broad-redesign.md'
+        path.write_text(path.read_text().replace(
+            'engineering/compiler/profile/50-pwp-retained-state.md',
+            'engineering/01-data-shape.md',
+        ))
+        self.assert_invalid('Broad redesign must integrate the PWP retained-state gate')
+
+    def test_broad_redesign_requires_conditional_512_gate(self):
+        path = self.skill / 'references/broad-redesign.md'
+        path.write_text(path.read_text().replace(
+            '512 is a specialized wide-frontend technique, not a general DOD target.',
+            '512 is the default batching target.',
+        ))
+        self.assert_invalid('Broad redesign missing anti-slop invariant')
 
 if __name__ == '__main__':
     unittest.main()
