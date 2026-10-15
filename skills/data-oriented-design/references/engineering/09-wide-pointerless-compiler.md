@@ -558,7 +558,7 @@ BUILD
 Vec<T> / builder maps / parser scratch
     ↓ freeze or pack
 READ
-exact immutable arrays / boxed slices / compact tables
+Box<[T]> / exact immutable arrays / compact tables
 ```
 
 After freeze, remove unnecessary growth capacity, mutation machinery, maps, temporary ownership wrappers, and builder-only metadata when the runtime/semantic contract no longer needs them.
@@ -612,9 +612,11 @@ direct parser for normal cases
 
 A legacy parser may temporarily remain as an independent test oracle. It should not remain an alternate production authority once equivalence and migration are complete.
 
-The Duck Mesh canonical production path from the source methodology is:
+The Duck Mesh canonical production path from the source methodology is explicitly one production path:
 
 ```text
+ONE production path
+
 SQL
 → direct frontend
 → MeshIR
