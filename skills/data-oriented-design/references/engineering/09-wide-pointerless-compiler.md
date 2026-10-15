@@ -65,7 +65,9 @@ micro-optimize instructions
 - **Pointerless state** decides how long-lived compiler data is represented.
 - **Validation** decides whether the redesign is correct and whether a claimed improvement is proven.
 
-Do not use a lower-level block to justify a higher-level stage. First establish that the stage must exist. Example: do not optimize AST layout until Pipeline elimination identifies a required AST consumer.
+Do not use a lower-level block to justify a higher-level stage. First establish that the stage must exist.
+
+Example: do not optimize AST layout until Pipeline elimination identifies a required AST consumer.
 
 ## General rules still apply
 
