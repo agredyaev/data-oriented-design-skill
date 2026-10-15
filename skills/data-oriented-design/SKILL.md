@@ -60,17 +60,12 @@ The preferred candidate is the simplest design that preserves the contract and r
 
 ## Non-negotiable rules
 
-- Establish the contract before changing representation or ownership.
-- For material performance or architecture work, draw the current structure in ASCII.
-- Prefer removing objects, states, passes, boundaries, round-trips, and retained representations before tuning them.
-- Prefer one canonical state. Give every additional index, view, cache, or side structure a concrete consumer and lifetime.
-- Prefer dense typed IDs, offsets, ranges, and contiguous storage when the domain and access pattern support them.
-- Treat deterministic stored values as derive candidates. Keep them only for semantic or measured-cost reasons.
-- Admit, parse, normalize, or resolve once when the validated typed result can be propagated.
-- Preserve authorization, wire validation, migrations, recovery, independent test oracles, and distinct authority checks.
-- Do not claim performance from complexity, row width, or a microbenchmark alone.
-- If two consecutive local changes do not materially move the end-to-end target, stop micro-tuning and return to structural analysis.
-- Report failures, regressions, unknowns, missing measurements, and rejected candidates.
+- Establish the contract before changing representation, ownership, or boundaries.
+- For material architecture/performance work, draw the current typed process and retained data.
+- Remove unnecessary stages/state before tuning; every added representation needs a named consumer and lifetime.
+- Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
+- Accept performance claims only from matched evidence; after two local misses, return to structural analysis.
+- Report regressions, unknowns, missing measurements, and rejected candidates.
 
 ## Completion
 
