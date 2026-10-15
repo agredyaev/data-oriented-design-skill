@@ -7,31 +7,37 @@ Use this block before accepting a compiler/frontend architecture change or a cla
 ```text
 START
   |
-  |-- Does correctness remain equivalent at the required semantic boundary?
-  |      |-- NO -> reject.
+  |-- Does required semantic behavior match?
+  |      |-- NO -> REJECT.
+  |      |-- NOT VERIFIED -> VERIFY before acceptance.
   |      '-- YES
   |
-  |-- Does the optimization depend on benchmark-only repeated shape?
-  |      |-- YES -> is that shape proven representative?
-  |      |             |-- NO -> reject/remove specialization.
+  |-- Does the optimization depend on repeated workload shape?
+  |      |-- YES -> does representative data demonstrate that repetition?
+  |      |             |-- UNKNOWN -> MEASURE representativeness.
+  |      |             |-- NO -> REJECT specialization.
   |      |             '-- YES -> continue.
-  |      '-- NO
+  |      '-- NO -> continue.
   |
-  |-- Was a physical cause predicted before implementation?
+  |-- Was a physical/logical cause and acceptance rule declared before implementation?
   |      |-- NO -> classify as architecture experiment; do not claim causal speedup.
   |      '-- YES
   |
-  |-- Did the predicted physical metric move?
-  |      |-- NO -> hypothesis failed.
+  |-- Did the predicted causal metric pass its acceptance rule?
+  |      |-- NO -> REJECT the performance hypothesis.
   |      '-- YES
   |
-  |-- Did the target phase improve under the declared acceptance rule?
-  |      |-- NO -> classify without claiming phase speedup.
+  |-- Did the target phase pass its acceptance rule?
+  |      |-- NO -> classify result without phase-speed claim.
   |      '-- YES
   |
-  |-- Did end-to-end KPI improve if that was the goal?
-         |-- NO -> do not claim end-to-end performance win.
-         '-- YES -> accept only if correctness passes and every added representation/invariant has a named responsibility and stays within its declared budget.
+  |-- Was end-to-end improvement part of the goal?
+         |-- NO -> classify the proven phase/result only.
+         '-- YES
+              |
+              |-- Did end-to-end KPI pass its acceptance rule?
+                     |-- NO -> do not claim end-to-end win.
+                     '-- YES -> ACCEPT if all added state/invariants have named responsibility and budget.
 ```
 
 ## 1. Reject benchmark-only architecture
