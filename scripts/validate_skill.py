@@ -197,12 +197,12 @@ for phrase in [
         errors.append(f"Structural analysis missing section: {phrase}")
 
 # Wide/pointerless compiler module must remain fully routed and cover the source methodology.
-for phrase in [
-    "Wide pointerless compiler",
-    "09-wide-pointerless-compiler.md",
-]:
-    if phrase not in skill and phrase not in readme:
-        errors.append(f"Compiler module is not surfaced: {phrase}")
+if "references/engineering/09-wide-pointerless-compiler.md" not in skill:
+    errors.append("Compiler module is not routed from SKILL.md")
+if "engineering/09-wide-pointerless-compiler.md" not in ENGINEERING_ROUTER.read_text(encoding="utf-8"):
+    errors.append("Compiler module is not routed from engineering router")
+if "09-wide-pointerless-compiler.md" not in readme:
+    errors.append("README does not document compiler module")
 
 for phrase in [
     "# Wide, Pointerless Compiler Design",
