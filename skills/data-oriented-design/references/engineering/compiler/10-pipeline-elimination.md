@@ -183,7 +183,9 @@ new invariants
 
 Unknown values remain `?`.
 
-Prefer the candidate that preserves the contract and passes the declared target with fewer new invariants. If evidence does not distinguish candidates, mark the choice `MEASURE`.
+Prefer the candidate that preserves the contract and passes the declared target with fewer new invariants.
+
+If evidence does not distinguish candidates, mark the choice `MEASURE`.
 
 ## Related rules
 
