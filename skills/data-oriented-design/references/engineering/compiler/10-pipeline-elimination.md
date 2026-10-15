@@ -1,6 +1,6 @@
 # Compiler Pipeline Elimination
 
-Use this block when a compiler, parser, DSL frontend, query frontend, or lowering pipeline contains several intermediate representations or repeated lowering passes.
+Use this block when a compiler/frontend has several intermediate representations or repeated lowering passes. It also applies to parser, DSL, and query frontends.
 
 ## Goal
 
@@ -136,7 +136,8 @@ Does layer L add required information?
        |      |-- NO -> delete L.
        |      '-- YES
        |
-       |-- Can the producer emit the target layout without adding a persistent representation, extra full pass, or new invariant that needs separate acceptance?
+       |-- Can the producer emit the target layout without adding
+       |   persistent state, a full pass, or a separately accepted invariant?
               |-- YES -> remove L.
               '-- NO -> keep one bounded packing pass and measure its net cost.
 ```
@@ -182,7 +183,7 @@ new invariants
 
 Unknown values remain `?`.
 
-Prefer the candidate that preserves the contract and produces the best declared structural/measurement result with the fewest new invariants. If evidence does not distinguish candidates, mark the choice `MEASURE`.
+Prefer the candidate that preserves the contract and passes the declared target with fewer new invariants. If evidence does not distinguish candidates, mark the choice `MEASURE`.
 
 ## Related rules
 
