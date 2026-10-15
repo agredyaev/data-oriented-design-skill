@@ -65,6 +65,51 @@ Count allocation shape separately from byte totals. A design with N entity alloc
 
 Use symbolic complexity for build, query, update, output, and extra space when input size determines the work. Include maintenance and conversion costs introduced by a candidate.
 
+## Pass-first candidate synthesis
+
+For broad redesign, derive storage from computation. Do not begin by converting each class into a row type.
+
+Build a pass/access matrix:
+
+| Pass | Iterates | Reads | Writes | Lifetime |
+| --- | --- | --- | --- | --- |
+| resolve | raw edges | name IDs, lookup | dependency IDs | build |
+| readiness | model IDs | dependency ranges, status | ready IDs, counts | request/pass |
+| execute | ready IDs | action columns | result/output | request |
+
+Use it to decide which values travel together, which relations need ranges/IDs, which data is cold, and which scratch must stay local. If `Class -> Row + typed IDs` leaves the same entity-centric grouping and the passes consume only field subsets, continue the redesign. AoS remains valid when the access matrix shows whole-record consumption.
+
+### Example: not just pointerless OOP
+
+Entity-shaped intermediate:
+
+```rust
+struct ModelRow {
+    name: NameId,
+    status: Status,
+    action: Action,
+    dependencies: Range<u32>,
+}
+struct Runtime {
+    models: Vec<ModelRow>,
+    dependency_ids: Vec<ModelId>,
+}
+```
+
+Pass-oriented candidate when scheduling reads status/relations and execution reads actions:
+
+```rust
+struct Runtime {
+    names: Vec<NameId>,
+    status: Vec<Status>,
+    actions: Vec<Action>,
+    dependency_offsets: Vec<u32>,
+    dependency_ids: Vec<ModelId>,
+}
+```
+
+The second form is not automatically better; the access matrix decides. The key requirement is that layout follows actual passes rather than inherited entity boundaries.
+
 ## Candidate-design techniques
 
 Apply the element-necessity decisions in [Workflow](../workflow.md#3-apply-the-element-necessity-test). For an element that can change, consider these concrete alternatives:

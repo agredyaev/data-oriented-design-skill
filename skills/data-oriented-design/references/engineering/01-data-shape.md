@@ -1,6 +1,6 @@
 # Data Shape and Computation
 
-Use this block to choose the shape of retained data. Start from the affected contract, dominant access pattern, identity domain, mutation pattern, and lifetime. A flat layout is a candidate, not a goal by itself.
+Use this block after identifying the affected passes and their read/write sets. Choose retained shape from access, identity, mutation, and lifetime; do not preserve entity boundaries by default. A flat layout is a candidate, not a goal.
 
 ## Decision tree: retained relationship and identity
 
@@ -33,13 +33,14 @@ struct Model {
 }
 ```
 
-If one immutable snapshot owns every model and addresses are not observable, test:
+If one immutable snapshot owns every model and the relevant passes read names/status/relations separately, test:
 
 ```rust
 struct ModelId(u32);
 
-struct Graph {
-    models: Vec<ModelRow>,
+struct GraphData {
+    name_ids: Vec<NameId>,
+    status: Vec<Status>,
     dependency_offsets: Vec<u32>,
     dependency_ids: Vec<ModelId>,
 }

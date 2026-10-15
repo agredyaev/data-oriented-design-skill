@@ -68,7 +68,7 @@ A decision can be structurally supported while a cost claim remains `UNVERIFIED`
 ## Non-negotiable rules
 
 - Establish the affected contract before changing representation, ownership, or boundaries.
-- Broad redesign requires the affected typed process/retained data; scoped modules need only declared inputs.
+- Broad redesign derives storage from typed passes/read-write sets, not entity classes; scoped modules need only declared inputs.
 - Test mechanism necessity before tuning it. Every added representation needs a named consumer and lifetime.
 - Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
 - Accept performance claims only from matched evidence. After two consecutive local changes on the same representation fail the declared target acceptance rule, revisit the affected structure.

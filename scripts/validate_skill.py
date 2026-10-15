@@ -238,6 +238,10 @@ def validate(repo):
         if signature and 'DOD-024' not in signature:
             errors.append('Repeated-pass code signature must route to DOD-024')
 
+    workflow = root / 'references/workflow.md'
+    if workflow in documents and 'entity-shaped state is only an intermediate simplification' not in documents[workflow]:
+        errors.append('Broad redesign must reject entity-to-record rewrites as a final DOD design')
+
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')

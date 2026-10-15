@@ -91,36 +91,24 @@ Do not require documentation for elements already obvious from the code and cont
 
 ## 4. Design the replacement from the contract
 
-Create a candidate before changing the old object model. Keep the current process when no justified simplification exists.
+Create the candidate from required transformations, not from the old class/entity model.
 
-For a performance task, establish the baseline and measured bottleneck before selecting a transformation. Use [Performance diagnosis](performance/00-diagnosis.md) when the cause is unknown. Missing evidence permits a concrete candidate marked `UNVERIFIED`, but never an invented performance finding.
-
-Create a candidate that preserves the contract and targets a named recurring cost or unnecessary structure. An index can add state to remove repeated search; count its build, update, memory and identity costs. A simpler-looking map alone does not establish a faster candidate.
+For a broad redesign, write the candidate passes first. For each pass name the iterated set, fields/streams read, fields/streams written, order, and lifetime:
 
 ```text
-CURRENT
-A → B → C → D → E → output
-
-CANDIDATE
-A → C → E → output
+admit(source)                   -> names[], raw_edges[]
+resolve(names[], raw_edges[])   -> edge_ids[]
+schedule(status[], edge_ids[])  -> ready_ids[] + local scratch
+execute(ready_ids[], actions[]) -> output
 ```
 
-Name concrete data types in both maps.
+Then choose storage that makes those passes simple and bounded. AoS is valid when a dominant pass consumes whole records together; SoA/hot-cold/ranges are candidates when passes consume stable subsets or relations.
 
-For retained data, prefer the simplest representation that supports the candidate process:
+Replacing object pointers with IDs while preserving the same entity-shaped state is only an intermediate simplification. If the candidate is still organized primarily around old entities/classes, continue from the pass read/write sets before calling it a DOD redesign.
 
-```text
-State
-  +-- rows[]
-  +-- offsets[]
-  +-- ids[]
-  +-- side_data[]
-  +-- indexes[]
-```
+For a performance task, diagnose unknown cost before selecting a cost-driven transformation. Missing evidence may leave a structural candidate `UNVERIFIED`, but never proves a speed claim.
 
-Use detailed DOD rules to refine the candidate, in either execution route.
-
-The candidate is valid only if every new element also passes the element-necessity test.
+Every new pass, retained array/index, and lifetime must pass the element-necessity test.
 
 ## 5. Compare current and candidate
 

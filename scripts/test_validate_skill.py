@@ -181,5 +181,15 @@ class ValidateSkillTests(unittest.TestCase):
         path.write_text(path.read_text().replace('rust', 'text'))
         self.assert_invalid('PWP retained-state block requires a concrete Rust code example')
 
+
+    def test_broad_redesign_requires_pass_first_dod(self):
+        path = self.skill / 'references/workflow.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'entity-shaped state is only an intermediate simplification',
+            'entity-shaped state can be the final redesign',
+        ))
+        self.assert_invalid('Broad redesign must reject entity-to-record rewrites as a final DOD design')
+
 if __name__ == '__main__':
     unittest.main()
