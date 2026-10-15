@@ -1,171 +1,92 @@
 # Canonical and Derived Data
 
-# 4. Canonical Data and Representation Rules
+Use this block to decide which representation is authoritative, which values should be derived, and where parsing/normalization should happen.
 
-## Rule DATA-01 — Keep one canonical representation
-
-Avoid multiple mutable or independently authoritative copies of the same domain state.
-
-Suspicious patterns include:
+## Decision tree: one authority versus duplicate state
 
 ```text
-Manifest
-ManifestRuntime
-ManifestCache
-ManifestLookup
-ManifestGraph
+Do two retained structures encode the same semantic facts?
+  NO -> KEEP both if each has a distinct responsibility.
+  YES
+    |
+    |-- Is one explicitly an index/view/projection derived from the other?
+    |     YES -> KEEP only if its consumer, rebuild/update rule, and lifetime are named.
+    |     NO
+    |
+    |-- Do both accept independent mutation?
+          YES -> FINDING: competing authorities; choose one canonical source.
+          NO -> remove the redundant retained copy unless a consumer/budget justifies it.
 ```
 
-when each duplicates the same information.
+### Example: graph copies
 
-Prefer one canonical representation plus indexes, ranges, or views.
+`ManifestGraph + RuntimeGraph + SchedulerGraph` is suspicious when all retain the same edges. Keep one canonical edge store and narrow indexes/views unless each graph has an independent semantic responsibility.
 
-### Better
-
-```rust
-struct Manifest {
-    models: Vec<Model>,
-    model_by_name: FrozenNameIndex,
-}
-```
-
-```rust
-struct ModelView<'a> {
-    manifest: &'a Manifest,
-    id: ModelId,
-}
-```
-
----
-
-## Rule DATA-02 — Do not recalculate stable identity repeatedly
-
-If an identity, digest, normalized name, or mapping has already been admitted and is stable, propagate the typed/admitted form.
-
-Do not repeatedly:
-
-- hash the same canonical data;
-- parse the same identifier;
-- normalize the same token;
-- rebuild the same lookup;
-- reconstruct the same graph identity.
-
----
-
-## Rule DATA-03 — Do not serialize and immediately deserialize internal typed data
-
-### Bad
+## Decision tree: store or derive
 
 ```text
-Typed result
-    ↓
-JSON Value
-    ↓
-bytes
-    ↓
-JSON parse
-    ↓
-validation
-    ↓
-Typed-ish use
+Is the value authoritative or independently historical/snapshot state?
+  YES -> KEEP it.
+Is there an exact deterministic derivation from retained canonical inputs?
+  NO -> KEEP it.
+Will every required input/version survive until the last read?
+  NO -> KEEP the value or preserve those inputs/version.
+Does derivation meet the read-path budget?
+  UNKNOWN -> MEASURE.
+  NO -> KEEP the stored value.
+  YES -> candidate: DERIVE at use.
+Does removal also eliminate invalidation/synchronization/update work?
+  YES -> include those removed costs in the comparison.
 ```
 
-Prefer a reusable validation path for typed/internal values while retaining original-wire validation where wire-level properties matter.
+### Example: token end
 
-Example: duplicate JSON keys can only be checked reliably at the original wire-decoding boundary, so do not remove that external-byte check merely to eliminate an internal round-trip.
+`end = start + fixed_width(kind)` can be derived when the source contract makes width fixed. A variable-width token cannot be reconstructed from `start + kind` alone; keep enough source/context or retain the endpoint.
 
----
+## Decision tree: parse/admit once
 
-## Rule DATA-04 — Preserve admitted typed projections
-
-If parsing/admission has already produced a valid typed representation, downstream code should consume that representation whenever the contract permits.
-
-### Bad
-
-```rust
-validate_relation_name(raw)?;
-let parts = parse_relation_name(raw)?;
-validate_relation_name_again(&parts)?;
+```text
+Has raw input already been validated/normalized into a typed value?
+  NO -> perform admission at the required boundary.
+  YES
+    |
+    |-- Does a later consumer require the original bytes/text semantics?
+    |     YES -> keep the original boundary data it needs.
+    |     NO -> PROPAGATE the admitted typed value.
+Does a later stage parse/normalize/hash the same identity again?
+  YES -> REMOVE the repeated work unless validity/version changed.
 ```
 
-### Better
-
-```rust
-let admitted = admit_relation_name(raw)?;
-execute_with_relation(admitted)?;
-```
-
----
-
-## Rule DATA-05 — Avoid repeated full-document reparsing
-
-A known bad pattern is retaining a complete JSON document only to repeatedly reparse it for each work item.
+### Example: identifier
 
 Prefer:
 
-```text
-authenticated immutable decision
-        ↓
-bounded typed execution projection
-        ↓
-execution
+```rust
+let id = admit_relation_name(raw)?;
+execute(id)?;
 ```
 
-Do not use this optimization to remove live authority checks. Immutable decision reuse and live claim/lease/fence validation are separate responsibilities.
+over validate → parse → normalize → hash the same name again in every downstream stage.
 
----
-
-## Source-aligned computation rule — Prefer cheap recomputation over retained derived state
-
-Memory traffic and retained state are costs. When a value is a deterministic function of canonical data, compare retaining it with recomputing it.
-
-Prefer recomputation when:
-
-- the derivation is cheap relative to the memory traffic or lookup it replaces;
-- reads do not require historical snapshot semantics;
-- canonical inputs are already resident for the operation;
-- retaining the value would add bytes to every row or require another allocation/index;
-- stored copies would require invalidation, synchronization, or update bookkeeping.
-
-Examples:
+## Decision tree: internal serialization round-trip
 
 ```text
-stored:
-row.start
-row.end
-row.line
-row.column
-
-candidate:
-row.start
-row.kind
-source bytes + lexical context for variable-width tokens
-line_starts[]
-
-fixed-width kind: end = start + fixed_width(kind)
-variable-width kind: rescan retained source with the required lexical context
-line/byte-column: find preceding line start, then subtract
+Does typed internal data serialize and immediately deserialize before use?
+  NO -> no finding.
+  YES
+    |
+    |-- Is the byte-level boundary itself required for wire/compatibility/security semantics?
+    |     YES -> KEEP validation at that boundary.
+    |     NO -> pass the typed representation directly.
 ```
 
-`start` and `kind` alone cannot recover a variable-width token's end. If source/context is discarded, or rescanning breaches the read budget, retain the endpoint. User-visible character columns may need Unicode/tab handling rather than byte subtraction. Use [DOD-017](../performance/21-layout-and-encoding.md#dod-017-decision-tree) for exact derivation and lifetime checks.
+### Example: JSON validation
 
-and:
+Do not delete duplicate-key detection performed on original JSON bytes. But once that boundary produced trusted typed data, do not convert it back to JSON and parse it again only to call another internal component.
 
-```text
-stored:
-normalized_name
-parsed_name
-name_hash
+## Guardrails
 
-candidate:
-admitted typed name
-+ derive/render only at the boundary that needs text
-```
-
-Do not recompute blindly. Keep a derived value when measured recomputation violates the read-path budget, when required inputs are intentionally discarded, or when the stored value has independent temporal or compatibility semantics.
-
-The design question is:
-
-> Is this value state, or is it a function of state?
-
-If it is only a function of canonical state, storing it requires an explicit cost or semantic justification.
+- A cache/index is not a second authority when canonical ownership and rebuild/update rules are explicit.
+- Recompute only from inputs whose lifetime and version match the required value.
+- Live claim/lease/fence checks are not removable snapshots.
+- For exact derived-field cost gates, use [DOD-017](../performance/21-layout-and-encoding.md#dod-017-decision-tree).

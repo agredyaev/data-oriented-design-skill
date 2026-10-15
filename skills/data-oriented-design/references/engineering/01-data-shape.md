@@ -1,414 +1,130 @@
 # Data Shape and Computation
 
-## 1. Governing Principle
+Use this block to choose the shape of retained data. Start from the affected contract, dominant access pattern, identity domain, mutation pattern, and lifetime. A flat layout is a candidate, not a goal by itself.
 
-Prefer the **smallest explicit implementation** that preserves required behavior, data integrity, authorization, recoverability, compatibility, determinism, and resource bounds.
+## Decision tree: retained relationship and identity
 
-Data-Oriented Design (DOD) is the primary implementation bias where it matches the workload. YAGNI applies aggressively: do not introduce infrastructure, abstraction, caching, indirection, or generic frameworks without a demonstrated requirement.
-
-A cleanup is successful only if it does at least one of the following:
-
-- closes required behavior or a correctness defect;
-- removes demonstrated duplication;
-- removes unnecessary state or representation;
-- reduces avoidable work or allocation;
-- strengthens a meaningful behavioral test.
-
-Style-only churn is not progress.
-
----
-# 2. Core DOD Rules
-
-## Rule DOD-01 — Design around the dominant iteration
-
-For each relevant path, identify:
-
-1. the dominant iteration;
-2. the fields read and written;
-3. the identity domain;
-4. the lifetime of the data;
-5. allocation ownership.
-
-Choose the representation from that access pattern rather than from an object model.
-
-Prefer, when appropriate:
-
-```rust
-Vec<T>
-&[T]
-&mut [T]
-Range<usize>
-typed dense IDs
-CSR / offsets + flat arrays
-bounded side tables
-request-local scratch buffers
-explicit processing passes
+```text
+Is the relationship only local borrowed scratch?
+  YES -> KEEP a normal reference/slice if it is simplest.
+  NO
+    |
+    |-- Does ABI/FFI/stable-address identity require an address?
+    |     YES -> KEEP the required pointer/handle; name the contract.
+    |     NO
+    |
+    |-- Do related entities require independently managed lifetimes?
+    |     YES -> preserve that ownership boundary.
+    |     NO
+    |
+    '-- Can one owner keep all entities alive for every consumer?
+          NO -> KEEP independent ownership or design an explicit lifetime protocol.
+          YES -> TEST root-owned storage + typed IDs/offsets/ranges.
+                    Check bounds, stale IDs, deletion/reuse, and compaction.
 ```
 
-Avoid designing runtime state as a graph of individually allocated objects unless the workload genuinely requires it.
+### Example: frozen model graph
 
-### Bad
+Before:
 
 ```rust
 struct Model {
-    id: ModelId,
-    dependencies: Vec<Arc<Mutex<Model>>>,
-}
-
-struct Runtime {
-    models: HashMap<ModelId, Arc<Mutex<Model>>>,
+    dependencies: Vec<Arc<Model>>,
 }
 ```
 
-Problems:
-
-- pointer chasing;
-- atomic reference-count traffic;
-- lock traffic;
-- fragmented allocation;
-- unclear ownership;
-- poor cache locality;
-- hidden execution order.
-
-### Better
+If one immutable snapshot owns every model and addresses are not observable, test:
 
 ```rust
-#[repr(transparent)]
 struct ModelId(u32);
 
-struct ModelGraph {
+struct Graph {
+    models: Vec<ModelRow>,
     dependency_offsets: Vec<u32>,
     dependency_ids: Vec<ModelId>,
 }
 ```
 
-```rust
-for model_idx in 0..model_count {
-    let begin = graph.dependency_offsets[model_idx] as usize;
-    let end = graph.dependency_offsets[model_idx + 1] as usize;
+Reject the replacement if a consumer can retain a model beyond the snapshot lifetime or requires stable addresses.
 
-    for dependency in &graph.dependency_ids[begin..end] {
-        process_dependency(*dependency);
-    }
-}
-```
-
----
-
-## Rule DOD-02 — Prefer dense typed IDs over pointer identity
-
-Domain relationships should normally use explicit typed IDs rather than object pointers.
-
-### Bad
-
-```rust
-struct Edge {
-    from: Arc<Model>,
-    to: Arc<Model>,
-}
-```
-
-or:
-
-```rust
-struct Edge {
-    from: String,
-    to: String,
-}
-```
-
-### Better
-
-```rust
-#[repr(transparent)]
-struct ModelId(u32);
-
-struct Edge {
-    from: ModelId,
-    to: ModelId,
-}
-```
-
-Do not erase semantic distinctions merely because multiple IDs use the same storage width.
-
-### Bad
-
-```rust
-type Id = u32;
-```
-
-used for models, strings, snapshots, versions, and work items.
-
-### Better
-
-```rust
-struct ModelId(u32);
-struct StringId(u32);
-struct SnapshotId(u32);
-struct WorkId(u32);
-```
-
-Storage may be identical; semantic domains are not.
-
----
-
-## Rule DOD-03 — Prefer contiguous storage over heap-per-object layouts
-
-Prefer:
-
-```rust
-Vec<Node>
-Vec<ModelId>
-Vec<u32>
-Box<[T]>
-```
-
-over:
-
-```rust
-Vec<Box<Node>>
-Vec<Arc<Node>>
-LinkedList<Node>
-HashMap<Id, Arc<Node>>
-```
-
-when the domain is bounded or naturally enumerable.
-
-The goal is not "`Vec` everywhere"; the goal is to match the representation to the traversal and lifetime.
-
----
-
-## Rule DOD-04 — Use explicit passes instead of object choreography
-
-Prefer visible processing stages.
-
-### Bad
-
-```rust
-world.update();
-```
-
-where the call triggers callbacks, shared mutable state, nested dispatch, and hidden allocations.
-
-### Better
-
-```rust
-admit_requests(input, &mut admitted)?;
-resolve_models(manifest, &mut admitted)?;
-build_actions(manifest, &admitted, &mut actions)?;
-compute_readiness(&actions, &mut ready)?;
-```
-
-Explicit passes make the following visible and testable:
-
-- ordering;
-- allocation;
-- mutation;
-- error propagation;
-- determinism;
-- ownership;
-- data dependencies.
-
----
-
-## Rule DOD-05 — Builder and runtime representations may differ
-
-Build-time convenience structures are allowed.
-
-Examples that may be valid before freeze:
-
-```rust
-HashMap
-BTreeMap
-String
-parser AST nodes
-temporary lookup tables
-temporary ownership graphs
-```
-
-They are not automatically DOD violations.
-
-The important boundary is **freeze**.
-
-### Example
-
-Build-time:
-
-```rust
-struct ManifestBuilder {
-    models: HashMap<String, ModelBuilder>,
-}
-```
-
-Frozen runtime:
-
-```rust
-struct Manifest {
-    model_names: Vec<StringId>,
-    model_offsets: Vec<u32>,
-    dependencies: Vec<ModelId>,
-}
-```
-
-Temporary parser/build structures should not survive into frozen runtime state without a concrete reason.
-
----
-
-## Rule DOD-06 — Do not force SoA everywhere
-
-Struct-of-Arrays is not a universal rule.
-
-Use Array-of-Structs when the dominant loop uses the record as a unit.
-
-### Good AoS
-
-```rust
-struct WorkItem {
-    model: ModelId,
-    partition: PartitionId,
-    mode: Mode,
-}
-
-struct WorkQueue {
-    items: Vec<WorkItem>,
-}
-```
-
-If every hot loop reads all three fields, this may be the correct layout.
-
-Use SoA when hot passes touch only a subset of fields.
-
-### Possible SoA
-
-```rust
-struct WorkState {
-    statuses: Vec<Status>,
-    attempts: Vec<u16>,
-    owners: Vec<WorkerId>,
-}
-```
-
-if the scheduler repeatedly scans `statuses` without needing the other fields.
-
-Do not mechanically convert every small struct into SoA.
-
----
-
-## Rule DOD-07 — Do not force CSR, bitsets, or dense indexes where they do not fit
-
-CSR is appropriate for stable graph-like adjacency traversal.
-
-It is not mandatory for every relation.
-
-Likewise:
-
-- not every sparse set should become a bitset;
-- not every mapping should become a dense array;
-- not every collection should use integer indexing.
-
-Use these structures only where identity density, lifetime, access pattern, and bounds justify them.
-
----
-
-## Rule DOD-08 — Reuse scratch locally, not through global shared caches
-
-Prefer request-local or operation-local scratch:
-
-```rust
-struct Scratch {
-    queue: Vec<NodeId>,
-    marks: Vec<u32>,
-}
-```
-
-Reuse explicitly:
-
-```rust
-scratch.queue.clear();
-scratch.marks.fill(0);
-```
-
-Avoid introducing global/shared caches such as:
-
-```rust
-Arc<Mutex<HashMap<RequestKey, CachedResult>>>
-```
-
-unless there is an existing requirement and demonstrated benefit.
-
-When reusable scratch or generation-indexed storage is introduced, test:
-
-- reset correctness;
-- generation rollover;
-- stale-index rejection;
-- capacity overflow;
-- empty input;
-- disconnected input;
-- deterministic ordering;
-- simultaneously live requests where applicable.
-
----
-
-## Source-aligned structural rule — Prefer pointer-free frozen records
-
-When a runtime domain is bounded, enumerable, or naturally frozen, test whether the retained records can be address-independent:
-
-- the top-level owner may own arrays, byte pools, maps, or other storage;
-- records inside those stores should prefer values, typed IDs, offsets, lengths, ranges, tags, and compact handles over owning pointers or per-record heap containers;
-- relationships should resolve through the owning state rather than through object pointers when this preserves required semantics;
-- moving or reallocating the backing stores should not require rewriting internal relationships when IDs/offsets are defined independently of raw addresses.
-
-A useful target shape is:
+## Decision tree: nested variable-size children
 
 ```text
-State
-  +-- entities[]
-  +-- child_items[]
-  +-- string_bytes[]
-  +-- indexes[]
-
-Entity {
-  name: StringId
-  children: Range
-}
+Does each parent own a separate child allocation?
+  NO -> KEEP the simpler current relation unless another requirement changes it.
+  YES
+    |
+    |-- Are child lists stable/frozen or rebuilt as a bounded unit?
+    |     YES -> TEST one flat children[] + offsets/ranges.
+    |     NO
+    |
+    |-- Does the contract require cheap arbitrary append/remove per parent?
+          YES -> KEEP an append/update-friendly representation.
+          NO -> compare flat rebuild/update cost with the workload; MEASURE if disputed.
 ```
 
-instead of:
+### Example: flat ranges
+
+`[[A,B], [], [C]]` can become `children=[A,B,C]`, `offsets=[0,2,2,3]`. Parent order is preserved. Do not claim O(1) append to parent 0 after freezing.
+
+## Decision tree: AoS, SoA, or hot/cold split
 
 ```text
-State
-  +-- Entity*
-       +-- String*
-       +-- Vec<Child*>
+What does the dominant repeated pass read?
+  most fields together -> KEEP AoS unless padding/memory budget says otherwise.
+  a stable subset sequentially
+      -> TEST SoA or a hot/cold split.
+  random whole-record access
+      -> KEEP AoS as baseline; a split needs measured benefit.
+Does pure SoA increase page/TLB or multi-column working-set cost?
+  YES -> TEST AoSoA/chunking.
+Does the candidate force full-record reconstruction in the hot loop?
+  YES -> REJECT that split.
 ```
 
-This is not a ban on pointers. Borrowed references, FFI handles, externally owned resources, and genuinely concurrent shared ownership may require them. The question is whether pointer identity and per-object ownership are part of the domain contract or merely an implementation habit.
+### Example: status scan
 
-### Relocatability check
+If a scheduler repeatedly scans only `status` across one million work items, test `statuses[]` separate from cold payload. If every hot operation immediately needs the whole work item, keep AoS.
 
-For frozen or snapshot-like state, ask:
-
-> Could the retained representation be moved to another address without fixing up every relationship?
-
-A `yes` is not mandatory, but inability to relocate because domain records contain raw internal pointers is a reason to examine the representation.
-
-### Allocation-shape check
-
-Count allocations by structure, not only total bytes. A representation that changes:
+## Decision tree: builder versus frozen state
 
 ```text
-N entities
-+ M nested vectors
-+ S owned strings
+Does a build-time map/AST/growable buffer have a consumer after freeze?
+  NO -> RELEASE it at its last consumer.
+  YES
+    |
+    |-- Does runtime need the full builder structure?
+    |     YES -> KEEP it.
+    |     NO -> retain only the required projection/index.
+Is an exact-size packing/freeze pass proposed only for compactness?
+  YES -> include conversion copies, peak bytes, and future growth.
+          MEASURE when cost determines adoption.
 ```
 
-into:
+### Example: build lookup
+
+A `HashMap<String, ModelId>` used only while resolving edges should disappear after freeze. Keep it if the runtime API still accepts names and must resolve them.
+
+## Decision tree: explicit passes
 
 ```text
-entities[]
-children[]
-string_bytes[]
-indexes[]
+Does an object method hide callbacks/shared mutation/nested dispatch?
+  NO -> no DOD finding from indirection alone.
+  YES
+    |
+    |-- Can required ordering and state transitions be written as bounded typed passes?
+          NO -> KEEP the boundary that encodes the required semantics.
+          YES -> TEST explicit passes with named inputs/outputs and owners.
 ```
 
-may remove allocator metadata, pointer chasing, deallocation loops, and ownership complexity even when raw payload bytes are similar.
+### Example: make work visible
+
+Prefer explicit operations such as `admit -> resolve -> build_actions -> compute_readiness` when they expose real dependencies. Do not split one cohesive operation merely to create more stages.
+
+## Guardrails
+
+- Do not erase semantic ID domains merely because their storage width matches.
+- Do not force `Vec`, SoA, CSR, bitsets, or dense IDs where bounds/access patterns do not fit.
+- Do not call a flatter shape faster without matched evidence.
+- Use [PWP retained-state decisions](compiler/profile/50-pwp-retained-state.md) for detailed pointer/lifetime cases.
+- Use [performance layout rules](../performance/21-layout-and-encoding.md) when a cost target selects field layout or encoding.

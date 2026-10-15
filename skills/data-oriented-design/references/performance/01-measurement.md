@@ -1,79 +1,114 @@
 # Performance Measurement and Reporting
 
-## Language rules
+Use this block for matched benchmark mechanics and result classification. Measure only the claimed target plus costs/guardrails that can change the adoption decision.
 
-Apply these rules to generated review output. Do not rewrite code identifiers or quoted source text.
+## Workload contract
 
-- Use the same word for the same thing every time.
-- Use approved common words when possible.
-- Do not omit articles or determiners such as `the`, `a`, `an`, and `this`.
-- Use active voice for procedures.
-- Use the imperative for instructions.
-- Put one instruction in each procedural sentence.
-- Put one topic in each paragraph.
-- Use vertical lists for complex text.
-- Keep procedural sentences at 20 words or fewer.
-- Keep descriptive sentences at 25 words or fewer.
-- Keep noun clusters to three words when practical.
-- Use simple present, simple past, or simple future for descriptions.
-- Use infinitives when they make an instruction clearer.
-- Do not use progressive verb forms.
-- Do not use perfect verb forms.
-- Do not use passive voice in procedures.
-- Use an `-ing` form only in an established technical name or code identifier.
-- Put a condition before an instruction when this improves clarity.
+Before comparing candidates, keep the relevant conditions matched:
 
-These rules follow the supplied Simplified Technical English style. They do not claim certified ASD-STE100 dictionary compliance.
+```text
+input and distribution
+build/version
+feature flags
+thread count
+machine
+compiler flags
+cache state
+output validation
+repetition count
+acceptance rule
+```
+
+Separate cold, warm, full, and incremental workloads when they represent different product behavior.
+
+## Measurement rules
+
+- Use identical before/after inputs and conditions.
+- Declare the acceptance rule before implementation.
+- Use repeated runs and report median plus variation/uncertainty.
+- Interleave A/B runs when machine drift can matter.
+- Measure the physical metric predicted by the hypothesis and the declared target.
+- Measure only affected construction/update/lifetime guardrails; state why omitted costs cannot affect acceptance.
+- Separate phase time from end-to-end time.
+- Measure reads and writes when layout/packing changes them.
+- Check PMU multiplexing/time-running values when hardware counters are used.
+- Do not infer speed from Big O, row width, fewer allocations, or cache intuition alone.
+
+## Falsifiable hypothesis
+
+Write this before implementation when a cost claim selects the change:
+
+```text
+HOTSPOT
+<operation/state and measured contribution to the target>
+
+EVIDENCE
+<measurement that identifies the cost>
+
+HYPOTHESIS
+<physical/logical cause>
+
+CHANGE
+<smallest transformation that removes the cause>
+
+PREDICTION
+<metric that must move and direction>
+
+TARGET
+<declared acceptance rule>
+
+GUARDRAILS
+<required limits that may be affected>
+
+CORRECTNESS
+<behavior that must remain true>
+```
+
+If the predicted causal metric does not move, reject that performance hypothesis even when another local metric changes.
+
+## Reads, writes, allocation, and lifetime
+
+Record only dimensions changed by the candidate, for example:
+
+```text
+bytes read / written
+copies or memcpy bytes
+packing/producer stores
+allocation count / allocated bytes
+reallocated bytes
+retained bytes
+peak live bytes
+build/update cost
+```
+
+A smaller consumer read path can lose end-to-end if packing/build writes rise. A retained-memory win can be valid with unchanged latency when the latency guardrail still passes.
 
 ## Layout choices
 
-Choose between AoS, SoA, and AoSoA from the measured access pattern.
+Choose AoS, SoA, or AoSoA from measured access behavior.
 
-- Keep AoS when most fields are used together.
-- Test SoA for sequential field-subset scans.
-- Test AoSoA when pure SoA increases page or TLB pressure.
-- Benchmark the chunk size for AoSoA.
-- Do not rebuild full rows inside a hot SoA loop.
+- Keep AoS when most fields are consumed together.
+- Test SoA for repeated sequential field-subset scans.
+- Test AoSoA when pure SoA increases page/TLB or multi-column working-set cost.
+- Benchmark chunk size when AoSoA is selected.
+- Reject a split that reconstructs full rows inside the hot loop and loses the intended access benefit.
 
 ## Access-order choices
 
-Layout is only one part of DOD.
+When measured reuse/access order is the cause:
 
-Test these changes when locality or visit count is the problem:
-
-- Fuse passes when they use the same data and preserve semantics.
-- Split a pass when rare cold work pollutes the hot path.
-- Block work when a smaller working set can stay in cache.
-- Cluster work when a key causes random access.
-- Include sort or reorder cost in the result.
-
-## Reads, writes, and lifetime
-
-Measure reads and writes.
-
-Record:
-
-```text
-bytes read
-bytes written
-copies
-memcpy bytes
-producer stores
-packing stores
-allocation count
-allocated bytes
-reallocated bytes
-peak live bytes
-```
-
-A smaller read path can still lose end-to-end when build or packing writes increase.
+- fuse passes only when dependencies, errors, effects, and order permit it;
+- split cold work only when deferral preserves semantics;
+- block only when the bounded working set fits the intended cache level;
+- cluster/reorder only when computation order may change safely;
+- include sort/reorder/restoration cost.
 
 ## Concurrency gate
 
-Build a scaling curve before you add sharding:
+Before sharding or adding thread-local state, measure a scaling curve such as:
 
 ```text
-threads | wall
+threads | wall/throughput
 1
 2
 4
@@ -81,85 +116,49 @@ threads | wall
 16
 ```
 
-If scaling stops, classify the cause:
-
-```text
-serial fraction
-lock contention
-atomic contention
-false sharing
-memory bandwidth saturation
-load imbalance
-scheduler overhead
-NUMA
-```
-
-Use thread-local storage, sharding, or cache-line isolation only after evidence supports the cause.
-
-## Measurement rules
-
-- Use repeated runs.
-- Report median and variation.
-- Keep before and after conditions equal.
-- Interleave A/B runs when machine drift can matter.
-- Separate cold and warm workloads.
-- Measure PMU events in small related groups.
-- Check PMU multiplexing and time-running values.
-- Do not infer speed from Big O or row width alone.
-
-## Falsifiable hypothesis
-
-Write this block before implementation:
-
-```text
-HOTSPOT
-<operation/state and contribution to the declared target metric>
-
-EVIDENCE
-<measurement that identifies the cost>
-
-HYPOTHESIS
-<physical cause>
-
-CHANGE
-<smallest proposed transformation>
-
-PREDICTION
-<metric that must move and direction>
-
-CORRECTNESS
-<invariants that must remain true>
-```
-
-If the predicted physical metric does not move, reject the performance hypothesis.
+Classify the supported cause: serial fraction, lock/atomic contention, false sharing, bandwidth saturation, load imbalance, scheduler overhead, or NUMA. Sharding is not a remedy for bandwidth saturation.
 
 ## Result classes
 
-Choose the adoption verdict first, then describe the supported benefits. Result classes may coexist; lead with the declared target.
+Choose adoption precedence first:
 
 ```text
-Required correctness violated? -> REJECT, regardless of measured benefits.
-Required budget/guardrail violated? -> REGRESSION; reject adoption.
-Required acceptance evidence missing? -> UNVERIFIED; do not claim acceptance.
-Declared target passes? -> Accept that result if added state has a justified lifetime/cost.
-Target does not pass? -> Report TARGET UNMET; retain only for a separately justified
-                        measured benefit or named structural simplification.
+required correctness violated
+  -> REJECT
+
+required budget/guardrail violated
+  -> REGRESSION; reject adoption
+
+required acceptance evidence missing
+  -> UNVERIFIED
+
+declared target passes
+  -> accept only that supported result class
+
+declared target does not pass
+  -> TARGET UNMET; keep only for a separately justified measured benefit
+     or named structural simplification
 ```
 
-- **PERFORMANCE WIN** — the declared time/throughput metric passes, with supporting causal evidence; name its scope.
-- **MEMORY WIN** — the declared retained bytes, peak bytes or artifact size passes; name which one.
-- **SCALABILITY WIN** — the declared workload-scaling criterion passes; show the tested range.
-- **PARALLEL WIN** — the declared thread-scaling criterion passes.
-- **NO EFFECT** — the compared target metrics remain within measurement uncertainty.
-- **REGRESSION** — a required budget fails, or an agreed comparison identifies a meaningful worsening; report the magnitude.
+Supported result classes:
 
-Illustrative decisions:
+- **PERFORMANCE WIN** — declared time/throughput target passes; name phase or end-to-end scope.
+- **MEMORY WIN** — declared retained bytes, peak bytes, or artifact-size target passes.
+- **SCALABILITY WIN** — declared workload-scaling criterion passes over the tested range.
+- **PARALLEL WIN** — declared thread-scaling criterion passes.
+- **STRUCTURAL SIMPLIFICATION** — named representation/pass/state/invariant was removed with behavior verified; no cost claim implied.
+- **NO EFFECT** — compared target metrics remain within measurement uncertainty.
+- **REGRESSION** — required budget fails or a meaningful worsening violates the adoption rule.
+- **TARGET UNMET** — narrower benefit may exist, but the declared target still fails.
+- **UNVERIFIED** — evidence needed for acceptance is missing.
+
+### Examples
 
 | Before → after | Contract | Verdict |
 | --- | --- | --- |
 | retained 200 → 140 MB; latency 10 → 10 ms | retained ≤150 MB; latency ≤11 ms | MEMORY WIN; no speed claim |
-| retained 200 → 140 MB; latency 10 → 14 ms | same limits | REGRESSION; memory benefit does not permit adoption |
+| retained 200 → 140 MB; latency 10 → 14 ms | same limits | REGRESSION; reject adoption |
 | phase 8 → 4 ms; total 100 → 99 ms within ±3 ms | total ≤90 ms | phase benefit only; TARGET UNMET |
+| wrapper/state removed; behavior tests pass; no timing run | structural simplification only | STRUCTURAL SIMPLIFICATION |
 
-Name any statistically supported worsening even if it stays within its guardrail. A result label must not hide the trade-off.
-
+Name statistically supported worsening even when it remains inside a guardrail if it matters to the trade-off.

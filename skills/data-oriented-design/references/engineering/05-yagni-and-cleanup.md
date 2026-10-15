@@ -1,125 +1,23 @@
 # YAGNI and Cleanup
 
-# 6. YAGNI Rules
+Use this block to decide whether an abstraction, wrapper, framework, cache, service, registry, or generic layer has a current responsibility.
 
-## Rule YAGNI-01 — No speculative infrastructure
-
-Do not introduce new:
-
-- runtime services;
-- durable stores;
-- sources of truth;
-- generic backends;
-- plugin systems;
-- dependency-injection frameworks;
-- caches;
-- event buses;
-- registries;
-- abstraction layers;
-
-without an existing requirement and demonstrated need.
-
----
-
-## Rule YAGNI-02 — Every abstraction must have a concrete responsibility
-
-For every abstraction, ask:
-
-> What concrete ownership, validation, lifetime, error, transaction, or compatibility responsibility does this abstraction provide?
-
-If the answer is only:
-
-- "clean architecture";
-- "future extensibility";
-- "we may need another backend";
-- "it makes testing easier";
-- "it removes a few repeated lines";
-
-then the abstraction is not justified by itself.
-
----
-
-## Rule YAGNI-03 — Prefer small local helpers over frameworks
-
-If three modules repeat identifier quoting:
-
-### Good
-
-```rust
-fn quote_identifier(input: &str) -> Result<String>
-```
-
-inside the owning crate.
-
-### Bad
-
-Creating:
+## Decision tree: abstraction necessity
 
 ```text
-GenericNativeExecutionFramework
-  + execution traits
-  + mode enums
-  + backend abstraction
-  + dependency injection
+For the layer/trait/wrapper/service, can you name a current responsibility for:
+  ownership / lifetime / validation / authorization / transaction /
+  compatibility / error translation / required polymorphism?
+  YES -> KEEP that responsibility; simplify only around it.
+  NO
+    |
+    |-- Is the only reason future extensibility, "clean architecture",
+    |   fewer lines, or possible future backends?
+          YES -> REMOVE/MERGE the abstraction.
+          NO/UNKNOWN -> inspect actual callers/consumers before deciding.
 ```
 
-to remove a few duplicated local functions.
-
----
-
-## Rule YAGNI-04 — Do not unify unlike operations merely to reduce LOC
-
-Similar syntax does not imply shared semantics.
-
-Do not combine operations if the resulting helper requires:
-
-```rust
-fn execute(
-    mode: Mode,
-    use_history: bool,
-    enforce_current: bool,
-    bootstrap: bool,
-    recovery: bool,
-    ...
-)
-```
-
-A helper with many mode flags often means unrelated behavior was forced together.
-
----
-
-## Rule YAGNI-05 — Do not create generic graph frameworks for semantically different graphs
-
-Model graphs, work graphs, and base/candidate mappings may share low-level representation concepts but have:
-
-- different identities;
-- different lifetimes;
-- different invariants;
-- different consumers.
-
-Do not merge them into a generic graph framework solely because their storage looks similar.
-
----
-
-## Rule YAGNI-06 — Do not add a cache to avoid solving an ownership problem
-
-A cache is not a substitute for:
-
-- a canonical representation;
-- a stable typed ID;
-- correct lifetime design;
-- request-local scratch;
-- an explicit index;
-- a better processing pass.
-
----
-# 7. Cleanup Anti-Patterns
-
-The following are priority cleanup candidates when demonstrated in production paths.
-
-## AP-01 — Pass-through wrappers
-
-### Bad
+### Example: pass-through wrapper
 
 ```rust
 fn plan(input: Input) -> Result<Plan> {
@@ -127,158 +25,80 @@ fn plan(input: Input) -> Result<Plan> {
 }
 ```
 
-when the wrapper owns no:
+Remove the wrapper when it adds no validation, translation, lifetime, authorization, compatibility, or error responsibility.
 
-- validation;
-- translation;
-- lifetime;
-- error;
-- authorization;
-- transaction;
-- compatibility responsibility.
-
----
-
-## AP-02 — Redundant DTO conversion
-
-### Bad
+## Decision tree: shared helper versus forced generic executor
 
 ```text
-DomainType
- -> InternalDto
- -> TransportLikeDto
- -> DomainType2
+Do the operations share the same semantic rule/invariants?
+  NO -> KEEP separate high-level operations.
+  YES
+    |
+    |-- Can a small local helper express only the identical mechanics?
+    |     YES -> extract that helper.
+    |     NO
+    |
+    '-- Would unification require mode enums/boolean flags to recover differences?
+          YES -> REJECT the generic executor.
+          NO -> TEST the narrower shared abstraction.
 ```
 
-inside one process with no real boundary.
+### Example: mutation modes
 
-Prefer one canonical type plus narrow projections where necessary.
+If a common `execute(mode, history, bootstrap, reconcile, ...)` needs flags to recreate distinct SCD2/full/incremental semantics, keep explicit operations and share only truly identical low-level mechanics.
 
----
-
-## AP-03 — Repeated parsing
-
-Examples:
-
-- SQL parsed twice in one compilation path;
-- relation names validated then reparsed;
-- retained Plan/Work JSON reparsed for each work item;
-- source metadata repeatedly decoded.
-
----
-
-## AP-04 — Unnecessary clones
-
-Examples:
-
-```rust
-let copied = value.clone();
-let bytes = data.to_vec();
-let owned = name.to_string();
-```
-
-inside repeated loops when the callee could borrow or consume.
-
----
-
-## AP-05 — Second copies of canonical graph/state
-
-Examples:
+## Decision tree: new cache/service/registry/framework
 
 ```text
-canonical graph
-+ runtime graph
-+ scheduler graph
-+ lookup graph
+Is there an existing requirement that cannot be met by current ownership/data flow?
+  NO -> REJECT speculative infrastructure.
+  YES
+    |
+    |-- Can a local helper/index/scratch/explicit owner solve the requirement?
+    |     YES -> prefer the smaller mechanism.
+    |     NO
+    |
+    '-- Does the proposed infrastructure have named consumers, lifetime,
+        failure/invalidation rules, and required evidence?
+          NO -> REJECT until those responsibilities exist.
+          YES -> TEST it against the declared requirement/budget.
 ```
 
-with duplicated edges/state and no independent semantic responsibility.
+### Example: cache versus ownership
 
-Prefer indexes/projections/ranges over full copies.
+Do not add a global cache because repeated code cannot reach canonical state conveniently. First repair ownership or add the smallest explicit index. Add retained cache state only for demonstrated repeated reuse.
 
----
+## Decision tree: apparent duplication
 
-## AP-06 — Global shared mutable state
-
-Strong smell:
-
-```rust
-lazy_static! {
-    static ref STATE: Mutex<HashMap<...>> = ...;
-}
+```text
+Do two similar blocks protect different invariants, authorities, recovery points,
+wire semantics, or an independent test oracle?
+  YES -> KEEP them separate.
+  NO
+    |
+    |-- Is the repeated code a small identical mechanic?
+          YES -> MERGE into a local helper.
+          NO -> do not unify only to reduce LOC.
 ```
 
-or globally shared caches used to coordinate ordinary domain execution.
+### Example: correctness boundary
 
-Prefer explicit ownership passed through the execution boundary.
+A claim check before work and a fence check at finalization can look repetitive but protect different authority moments. Do not merge them into one generic validation call if that weakens the protocol.
 
----
+## Decision tree: duplicate DTO/layer
 
-## AP-07 — Trait/object indirection with one implementation and no boundary responsibility
-
-### Suspicious
-
-```rust
-trait PlannerBackend {
-    fn plan(&self, ...);
-}
-
-struct DefaultPlanner;
+```text
+Does A -> B -> C inside one process cross a real boundary or add required information?
+  YES -> KEEP the required conversion.
+  NO -> can producer/consumer share one canonical type or narrow projection?
+          YES -> REMOVE/MERGE the redundant DTO layer.
+          NO -> name the concrete reason before keeping it.
 ```
 
-when there is one required planner and no external/test boundary requiring substitution.
+### Example: transport-like DTO
 
-Do not add polymorphism "in case we need another implementation."
+`DomainType -> InternalDto -> TransportLikeDto -> DomainType2` has no value merely because the names describe architectural layers. Keep a conversion only when a real boundary or invariant requires it.
 
----
+## Guardrails
 
-## AP-08 — Dependency injection frameworks
-
-Prefer explicit construction:
-
-```rust
-let owners = ApplicationOwners {
-    planner,
-    scheduler,
-    executor,
-    catalog,
-};
-```
-
-over a service container or registration framework.
-
-A new DI framework is specifically contrary to the cleanup direction.
-
----
-
-## AP-09 — Generic executor controlled by mode flags
-
-### Bad
-
-```rust
-execute_mutation(
-    MutationMode::Scd2,
-    true,
-    false,
-    Bootstrap::No,
-    ...
-)
-```
-
-Prefer operation-specific explicit code sharing only genuinely common low-level mechanics.
-
----
-
-## AP-10 — Rebuilding identical transaction-local data
-
-Examples:
-
-- collision-safe action names;
-- quoted identifiers;
-- key fragments;
-- normalized names;
-- bounded parameter projections.
-
-Prepare once per transaction/request when safe.
-
----
+Never remove authorization, transaction/claim/lease/fence checks, upgrade migrations, wire-level validation, recovery semantics, or independent test oracles as "duplication". Use [Correctness boundaries](06-correctness-boundaries.md) when the responsibility is uncertain.
