@@ -18,20 +18,23 @@ START
   |-- For each stage R:
   |      |
   |      |-- Does R add information required downstream?
-  |      |      |-- NO -> remove or fuse R.
+  |      |      |-- UNKNOWN -> resolve consumers/contract before redesign.
+  |      |      |-- NO -> REMOVE or MERGE R.
   |      |      '-- YES
   |      |
-  |      |-- Does R have an independent consumer after the next stage?
-  |      |      |-- YES -> keep R; name the consumer and lifetime.
+  |      |-- Is R consumed independently after the next stage?
+  |      |      |-- UNKNOWN -> inspect call graph/dataflow.
+  |      |      |-- YES -> KEEP R; name consumer and lifetime.
   |      |      '-- NO
   |      |
-  |      |-- Can the producer emit the next representation directly?
-  |             |-- YES -> remove R.
-  |             '-- NO -> keep the smallest staging form.
+  |      |-- Can the producer emit the next representation without adding a worse accepted cost?
+  |             |-- UNKNOWN -> MEASURE with the smallest prototype.
+  |             |-- YES -> REMOVE R.
+  |             '-- NO -> KEEP the smallest staging form.
   |
   |-- Does a superseded production path remain?
-  |      |-- YES -> migrate/delete it; keep only a temporary test oracle if required.
-  |      '-- NO
+  |      |-- YES -> MIGRATE/DELETE; keep only a temporary oracle if required.
+  |      '-- NO -> continue.
   |
   '-- Compare current and candidate pipeline counts.
 ```
