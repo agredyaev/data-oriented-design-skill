@@ -133,12 +133,12 @@ Does layer L add required information?
        |      |-- NO -> delete L.
        |      '-- YES
        |
-       |-- Can the producer emit the target layout without material complexity?
+       |-- Can the producer emit the target layout without adding a persistent representation, extra full pass, or new invariant that needs separate acceptance?
               |-- YES -> remove L.
               '-- NO -> keep one bounded packing pass and measure its net cost.
 ```
 
-A packing pass is justified only when:
+A packing pass is accepted only when:
 
 ```text
 packing cost < downstream savings
