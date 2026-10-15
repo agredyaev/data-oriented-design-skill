@@ -1,0 +1,216 @@
+# Compiler Redesign Validation
+
+Use this block before accepting a compiler/frontend architecture change or a claimed performance improvement.
+
+## Decision tree
+
+```text
+START
+  |
+  |-- Does correctness remain equivalent at the required semantic boundary?
+  |      |-- NO -> reject.
+  |      '-- YES
+  |
+  |-- Does the optimization depend on benchmark-only repeated shape?
+  |      |-- YES -> is that shape proven representative?
+  |      |             |-- NO -> reject/remove specialization.
+  |      |             '-- YES -> continue.
+  |      '-- NO
+  |
+  |-- Was a physical cause predicted before implementation?
+  |      |-- NO -> classify as architecture experiment; do not claim causal speedup.
+  |      '-- YES
+  |
+  |-- Did the predicted physical metric move?
+  |      |-- NO -> hypothesis failed.
+  |      '-- YES
+  |
+  |-- Did the target phase improve under the declared acceptance rule?
+  |      |-- NO -> classify without claiming phase speedup.
+  |      '-- YES
+  |
+  |-- Did end-to-end KPI improve if that was the goal?
+         |-- NO -> do not claim end-to-end performance win.
+         '-- YES -> accept if added complexity is justified.
+```
+
+## 1. Reject benchmark-only architecture
+
+If an optimization exploits repeated synthetic structure, require evidence that the same repetition exists in representative workloads.
+
+Do not retain templates, caches, bypasses, or special paths whose benefit comes from the benchmark generator rather than the product workload.
+
+## 2. Measure stages independently
+
+Record phase time for the relevant compiler stages, for example:
+
+```text
+source admission
+lexical classification
+token extraction
+parsing / IR emission
+dependency construction
+semantic evaluation
+lineage
+freeze / packing
+serialization
+```
+
+Do not accept "looks data-oriented" as evidence.
+
+A storage reduction with unchanged wall time is a memory/storage win, not a CPU win.
+
+## 3. Write a falsifiable prediction
+
+Before implementation, state:
+
+```text
+OBSERVATION
+measured hotspot/cost
+
+CAUSE
+physical or logical mechanism believed responsible
+
+CHANGE
+smallest transformation that removes that mechanism
+
+PREDICTION
+metric(s) that must move
+
+TARGET
+phase/end-to-end metric that must improve
+
+INVARIANTS
+semantic behavior that must remain unchanged
+```
+
+If the predicted physical metric does not move, the performance hypothesis is false even when some other local metric improves.
+
+## 4. Compare semantic outputs, not internal shape
+
+Choose the semantic boundary that defines correctness.
+
+Possible invariants:
+
+```text
+same accepted inputs
+same rejected inputs
+same relation/entity count
+same expression count
+same row/output count
+same dependencies
+same value lineage
+same row lineage
+same canonical hashes when contractual
+same observable ordering
+same error class/diagnostic contract when contractual
+```
+
+Instruction numbers, node addresses, traversal order, or internal packing need not match unless they are externally observable or persisted.
+
+A legacy implementation can serve temporarily as an independent oracle.
+
+## 5. Fail closed
+
+A direct or specialized parser must not guess on unsupported syntax or semantics.
+
+Required behavior:
+
+```text
+unsupported / unknown input
+    ↓
+explicit parse / unsupported / semantic error
+```
+
+Never convert unsupported syntax into silently different semantics for speed.
+
+## 6. Keep an optimization only for a named result
+
+Classify the outcome:
+
+```text
+performance win
+memory/storage win
+scalability win
+architecture simplification
+no effect
+regression
+```
+
+Decision:
+
+```text
+correctness failed
+    -> reject
+
+correctness passed + target improved
+    -> keep if complexity is justified
+
+correctness passed + target unchanged
+    -> keep only for a separate measured benefit
+       or a material architecture simplification
+
+new representation/layer added
+    -> require a general benefit large enough to pay
+       for its lifetime and invariants
+```
+
+Do not call a storage win a speed win.
+
+## 7. Complete redesign sequence
+
+```text
+state contract
+  ↓
+draw complete typed pipeline
+  ↓
+list persistent representations
+  ↓
+remove/fuse representations that add no required information
+  ↓
+replace unjustified long-lived pointer/key topology
+  ↓
+pool/resolve identity where justified
+  ↓
+inspect hot lexical scan
+  ↓
+test wide classification only if it is material
+  ↓
+test batch event extraction only if it is material
+  ↓
+remove staging tree when it has no independent consumer
+  ↓
+remove superseded production path
+  ↓
+semantic correctness gate
+  ↓
+representative measurement gate
+  ↓
+keep only justified complexity
+```
+
+## 8. Generic target architecture
+
+A valid target can look like:
+
+```text
+source bytes
+    ↓
+classification / tokenization
+    ↓
+compact parser contract
+    ↓
+parser with local scratch
+    ↓
+semantic IR in dense indexed storage
+    ↓
+semantic passes over required columns
+    ↓
+canonical result
+```
+
+Optional wide classification, mask algebra, batch compaction, SoA, CSR, interning, and pass fusion are mechanisms. They are not mandatory stages.
+
+Central invariant:
+
+> Every persistent representation and every full pass needs a named semantic consumer or a measured cost justification.
