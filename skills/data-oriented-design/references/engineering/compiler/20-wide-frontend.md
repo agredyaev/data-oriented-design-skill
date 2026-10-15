@@ -38,7 +38,7 @@ START
 
 Any transformation that changes lexical or parsing semantics must pass the semantic-equivalence and fail-closed gates in `40-validation.md`.
 
-## 1. Classify batches, not individual bytes, when justified
+## 1. Classify batches only after diagnosis selects lexical scanning
 
 A scalar branch-per-byte shape is:
 
