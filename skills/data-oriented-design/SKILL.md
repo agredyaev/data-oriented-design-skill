@@ -33,7 +33,7 @@ Start with at most three references after this router. Load another file only wh
 | Authorization, transactions, claims/leases/fences, migrations, recovery, wire checks | [Correctness boundaries](references/engineering/06-correctness-boundaries.md) |
 | Benchmark validity, acceptance decision, review heuristics | [Measurement and review](references/engineering/07-measurement-and-review.md) |
 | A concrete Rust transformation would clarify the design | [Examples](references/engineering/08-examples.md) |
-| Compiler/parser/IR | [Wide compiler](references/engineering/09-wide-pointerless-compiler.md) |
+| Compiler/tokenizer/parser/IR | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) |
 
 Use [engineering rules index](references/dod-yagni-engineering-rules.md) only when the problem is mixed or the correct block is unclear.
 
