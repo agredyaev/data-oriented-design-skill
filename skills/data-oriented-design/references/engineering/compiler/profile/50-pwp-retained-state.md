@@ -22,9 +22,40 @@ Are bounds, wrong-domain IDs, and stale IDs checked at admission/resolution?
 
 ### Example: domain graph and native handle
 
-Before: `Node { children: Vec<Arc<Node>> }`, one root owns a frozen enumerable graph; addresses are not observable. Candidate: `nodes: Vec<NodeRow>`, `child_ids: Vec<NodeId>`, ranges per parent. Traverse through the root owner. Deleting one node is not supported in this frozen contract, so a generation field has no current responsibility.
+Before:
 
-Counterexample: a native library stores a node's address across calls. Moving that node into a growable array breaks the contract. Keep stable-address storage for that boundary. Similarly, retain a reference-counted interrupt handle required for cross-thread cancellation.
+```rust
+struct Node {
+    children: Vec<Arc<Node>>,
+}
+```
+
+Candidate when one frozen graph owns every node and addresses are not observable:
+
+```rust
+struct NodeId(u32);
+
+struct NodeRow {
+    children: Range<u32>,
+}
+
+struct Graph {
+    nodes: Vec<NodeRow>,
+    child_ids: Vec<NodeId>,
+}
+```
+
+Deleting one node is not supported in this frozen contract, so a generation field has no current responsibility.
+
+Counterexample:
+
+```rust
+struct NativeNode {
+    handle: Arc<NativeHandle>, // native API retains stable identity across calls
+}
+```
+
+Keep stable-address/reference-counted storage for that boundary.
 
 ## Decision tree: nested children versus flat ranges
 
@@ -42,7 +73,24 @@ Do range endpoints fit the selected integer width for every valid input?
 
 ### Example: flatten child buffers
 
-Before: child vectors `[[A,B],[],[C]]`. Candidate: `children=[A,B,C]`, `offsets=[0,2,2,3]`. Parent 1 reads the empty range `[2,2)`; parent 2 reads `[2,3)`. Two nonempty child buffers can become one; the empty vector need not allocate. Payload bytes remain. Appending D to parent 0 is not O(1) in this frozen layout; retain another representation if that operation is contractual.
+Before:
+
+```rust
+struct Parent {
+    children: Vec<ChildId>,
+}
+```
+
+Candidate after freeze:
+
+```rust
+struct Relations {
+    child_offsets: Vec<u32>,
+    child_ids: Vec<ChildId>,
+}
+```
+
+For `[[A,B],[],[C]]`, store `child_ids=[A,B,C]` and `child_offsets=[0,2,2,3]`. Appending `D` to parent 0 is not O(1) in this frozen layout; retain another representation if that operation is contractual.
 
 ## Decision tree: store or derive a field
 
@@ -53,19 +101,44 @@ Is there an exact deterministic derivation from retained canonical inputs?
   NO -> KEEP it.
 Will every input survive until the last read, with the required version?
   NO -> KEEP the field or preserve its inputs/version explicitly.
-Does measured derivation meet the read budget, including repeated reads?
-  NO -> KEEP the field.
-  UNKNOWN -> MEASURE that trade-off; do not claim a speed/memory win.
-  YES -> candidate: remove stored copy and derive at use.
+Is the field read in a hot/repeated path or constrained by an explicit read-cost budget?
+  NO -> candidate: DERIVE at use; make no speed claim.
+  YES -> does existing evidence/bound show derivation fits that budget?
+          NO -> KEEP the field.
+          UNKNOWN -> MEASURE the trade-off.
+          YES -> candidate: DERIVE at use.
 Would removal eliminate invalidation/update/synchronization work?
   YES -> include those removed costs when comparing the candidate.
 ```
 
 ### Example: end position versus historical value
 
-`end = start + length` can be derived when the canonical start/length stay live and checked addition fits the source bound. Remove only that duplicated end value; preserve externally required binary layout separately.
+Before:
 
-A historical price is not derived from the current price. Keep it even if the values happen to match today. Recomputing it from mutable present-day state changes the meaning.
+```rust
+struct Token {
+    start: u32,
+    length: u16,
+    end: u32,
+}
+```
+
+Candidate when `end` is not a hot/repeated read and `start + length` is checked:
+
+```rust
+struct Token {
+    start: u32,
+    length: u16,
+}
+
+fn end(token: &Token) -> u32 {
+    token.start + u32::from(token.length)
+}
+```
+
+This is a structural simplification; it is not a speed claim. If `end` is read in a hot loop under a latency budget, measure that trade-off first.
+
+Counterexample: a historical price is not derived from the current price. Keep it even when the values happen to match today.
 
 ## Decision tree: builder, frozen state, and scratch lifetime
 
@@ -86,7 +159,24 @@ Does the full trade-off meet the declared budget?
 
 ### Example: retain the right name lookup
 
-Build uses `name -> NodeId` to resolve every edge. After freeze, all consumers use IDs and no name queries exist: release the build map. If a runtime API still resolves incoming names, retain that lookup index; dropping it would remove behavior.
+Before:
+
+```rust
+struct Builder {
+    nodes: Vec<NodeRow>,
+    by_name: HashMap<String, NodeId>,
+}
+```
+
+Candidate when every post-freeze consumer already uses IDs:
+
+```rust
+struct FrozenGraph {
+    nodes: Vec<NodeRow>,
+}
+```
+
+Remove the build map after its last consumer. If a runtime API still resolves incoming names, retain that lookup index; dropping it would remove behavior.
 
 For request scratch `visited[]`, clearing only the queue is insufficient if marks survive. Clear marks or use a checked generation scheme; verify generation wrap, concurrent requests, and stale IDs.
 

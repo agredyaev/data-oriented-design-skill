@@ -253,6 +253,12 @@ def validate(repo):
         for block in blocks:
             if documents[block].count('## Decision tree') != 1:
                 errors.append(f'Compiler block requires one primary decision tree: {block.name}')
+    pwp_retained = root / 'references/engineering/compiler/profile/50-pwp-retained-state.md'
+    if pwp_retained in documents and not re.search(
+        r'^\x60\x60\x60rust\s*$', documents[pwp_retained], re.M
+    ):
+        errors.append('PWP retained-state block requires a concrete Rust code example')
+
     profile_dir = root / 'references/engineering/compiler/profile'
     for block in sorted(profile_dir.glob('*.md')):
         text = documents[block.resolve()]

@@ -175,5 +175,11 @@ class ValidateSkillTests(unittest.TestCase):
         ))
         self.assert_invalid('Repeated-pass code signature must route to DOD-024')
 
+
+    def test_pwp_retained_state_requires_code_example(self):
+        path = self.skill / 'references/engineering/compiler/profile/50-pwp-retained-state.md'
+        path.write_text(path.read_text().replace('rust', 'text'))
+        self.assert_invalid('PWP retained-state block requires a concrete Rust code example')
+
 if __name__ == '__main__':
     unittest.main()
