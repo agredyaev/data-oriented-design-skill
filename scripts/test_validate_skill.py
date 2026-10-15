@@ -113,5 +113,38 @@ class ValidateSkillTests(unittest.TestCase):
         self.assert_invalid('Missing required file: references/modules.md')
 
 
+    def test_trusted_profiler_route_cannot_force_diagnosis(self):
+        path = self.skill / 'SKILL.md'
+        text = path.read_text()
+        line = next(line for line in text.splitlines()
+                    if 'Trusted profiler hotspot or supplied measured cause' in line)
+        changed = line.replace(
+            '[performance methodology](references/performance-methodology.md)',
+            '[performance diagnosis](references/performance/00-diagnosis.md)',
+        )
+        path.write_text(text.replace(line, changed))
+        self.assert_invalid('Trusted profiler route must not force Diagnosis')
+
+    def test_general_engineering_block_requires_decision_tree(self):
+        path = self.skill / 'references/engineering/04-ownership-and-concurrency.md'
+        path.write_text(path.read_text().replace('## Decision tree:', '## Advice:'))
+        self.assert_invalid('General engineering block has no decision trees')
+
+    def test_general_decision_tree_requires_example(self):
+        path = self.skill / 'references/engineering/03-hot-path-work.md'
+        path.write_text(path.read_text().replace('### Example:', '### Illustration:', 1))
+        self.assert_invalid('General decision tree lacks a worked example')
+
+    def test_measurement_block_rejects_output_style_policy(self):
+        path = self.skill / 'references/performance/01-measurement.md'
+        path.write_text(path.read_text() + '\n## Language rules\n- Use passive voice.\n')
+        self.assert_invalid('Performance measurement must not contain output-style language rules')
+
+    def test_module_routes_require_compiler_redesign_entry(self):
+        path = self.skill / 'references/modules.md'
+        path.write_text(path.read_text().replace(
+            'broad compiler/frontend redesign', 'compiler work', 1))
+        self.assert_invalid('Module routes must include broad compiler/frontend redesign')
+
 if __name__ == '__main__':
     unittest.main()

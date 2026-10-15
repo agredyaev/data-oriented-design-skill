@@ -19,6 +19,14 @@ REQUIRED = (
 LIMITS = {'SKILL.md': 6500, 'references/workflow.md': 10000,
           'references/performance-methodology.md': 5000,
           'references/engineering/09-wide-pointerless-compiler.md': 5000}
+GENERAL_DECISION_BLOCKS = (
+    'references/engineering/01-data-shape.md',
+    'references/engineering/02-canonical-and-derived.md',
+    'references/engineering/03-hot-path-work.md',
+    'references/engineering/04-ownership-and-concurrency.md',
+    'references/engineering/05-yagni-and-cleanup.md',
+    'references/engineering/07-measurement-and-review.md',
+)
 
 
 def prose(text):
@@ -60,6 +68,13 @@ def local_targets(text):
         if re.fullmatch(r'[\w./-]+\.md(?:#[\w-]+)?', literal):
             targets.append(literal)
     return sorted(set(targets))
+
+
+def decision_sections(text):
+    return re.findall(
+        r'(^## Decision tree:[^\n]*\n[\s\S]*?)(?=^## |\Z)',
+        text, re.M,
+    )
 
 
 def validate(repo):
@@ -165,6 +180,86 @@ def validate(repo):
         errors.append('SKILL.md must route to the workflow, not duplicate its numbered sequence')
     if 'Start with at most three references' not in router:
         errors.append('Missing initial reference loading cap')
+    trusted_row = next(
+        (line for line in router.splitlines()
+         if 'Trusted profiler hotspot or supplied measured cause' in line),
+        '',
+    )
+    if not trusted_row:
+        errors.append('Missing trusted-profile direct route')
+    elif 'performance/00-diagnosis.md' in trusted_row:
+        errors.append('Trusted profiler route must not force Diagnosis')
+    modules_path = root / 'references/modules.md'
+    if modules_path in documents:
+        modules = documents[modules_path]
+        if 'broad compiler/frontend redesign' not in modules:
+            errors.append('Module routes must include broad compiler/frontend redesign')
+        if 'trusted profile or supplied measured cause' not in modules:
+            errors.append('Module routes must include trusted-profile direct routing')
+    measurement = root / 'references/performance/01-measurement.md'
+    if measurement in documents and re.search(r'^## Language rules    structural = root / 'references/engineering/00-structural-analysis.md'
+    if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
+        errors.append('Structural analysis must provide techniques, not a second workflow/report')
+    compiler_router = root / 'references/engineering/09-wide-pointerless-compiler.md'
+    if compiler_router in graph:
+        blocks = {p for p in graph[compiler_router] if p.parent == root / 'references/engineering/compiler'}
+        required_blocks = {root / 'references/engineering/compiler' / name for name in (
+            '10-pipeline-elimination.md', '20-wide-frontend.md',
+            '30-pointerless-state.md', '40-validation.md',
+        )}
+        if not required_blocks.issubset(blocks):
+            errors.append('Compiler router must reach its core blocks')
+        for block in blocks:
+            if documents[block].count('## Decision tree') != 1:
+                errors.append(f'Compiler block requires one primary decision tree: {block.name}')
+    profile_dir = root / 'references/engineering/compiler/profile'
+    for block in sorted(profile_dir.glob('*.md')):
+        text = documents[block.resolve()]
+        decisions = re.split(r'(?=^## Decision tree:)', text, flags=re.M)[1:]
+        if not decisions:
+            errors.append(f'Decision block has no decision trees: {block.name}')
+        for decision in decisions:
+            title = decision.splitlines()[0]
+            body = re.search(r'^```[^\n]*\n(.*?)^```', decision, re.M | re.S)
+            if not body or not body.group(1).strip():
+                errors.append(f'Decision block has empty tree: {block.name}: {title}')
+            if not re.search(r'^### Example:', decision, re.M):
+                errors.append(f'Decision tree lacks a worked example: {block.name}: {title}')
+    return errors
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--repo-root', type=Path, default=Path(__file__).resolve().parents[1])
+    args = parser.parse_args()
+    errors = validate(args.repo_root.resolve())
+    if errors:
+        print('Skill validation failed:')
+        print('\n'.join(f'- {error}' for error in errors))
+        return 1
+    print('Skill validation passed: local routes/anchors, reachable references, 33 definitions and decision trees, router budgets.')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+, documents[measurement], re.M):
+        errors.append('Performance measurement must not contain output-style language rules')
+    for relative in GENERAL_DECISION_BLOCKS:
+        path = root / relative
+        if path not in documents:
+            continue
+        sections = decision_sections(documents[path])
+        if not sections:
+            errors.append(f'General engineering block has no decision trees: {relative}')
+            continue
+        for section in sections:
+            title = section.splitlines()[0]
+            body = re.search(r'^\x60\x60\x60[^\n]*\n(.*?)^\x60\x60\x60', section, re.M | re.S)
+            if not body or not body.group(1).strip():
+                errors.append(f'General decision tree is empty: {relative}: {title}')
+            if not re.search(r'^### Example:', section, re.M):
+                errors.append(f'General decision tree lacks a worked example: {relative}: {title}')
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')
