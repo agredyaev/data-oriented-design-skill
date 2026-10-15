@@ -1,23 +1,25 @@
 # Wide Frontend and Direct Parsing
 
-Use this block when tokenization, lexical classification, token extraction, parser staging, or repeated lexical decoding is a material part of the frontend cost.
+Use this block when tokenization, lexical classification, token extraction, parser staging, or repeated lexical decoding is measured as part of the target frontend cost, exceeds a declared budget, or is the structural cause under review.
 
-Do not introduce SIMD or a custom token format before the frontend cost is measured or the structural design clearly removes a representation.
+Do not introduce SIMD or a custom token format before the frontend cost is measured, unless the structural change removes a representation without making a performance claim.
 
 ## Decision tree
 
 ```text
 START
   |
-  |-- Is tokenization / lexical scanning material?
+  |-- Is tokenization / lexical scanning a measured contributor to the target or over budget?
   |      |-- NO -> do not optimize it.
+  |      |-- UNKNOWN -> MEASURE.
   |      '-- YES
   |
   |-- Is input classified one byte/item at a time with branch-per-item work?
   |      |-- YES -> test batch classification into masks/bitsets.
   |      '-- NO -> keep current scan unless another measured cause exists.
   |
-  |-- Are selected events extracted one-by-one from a hot mask?
+  |-- Does profiling show one-by-one mask extraction contributes to the target cost?
+  |      |-- UNKNOWN -> MEASURE.
   |      |-- YES -> test batch/SWAR/vector compaction.
   |      '-- NO
   |
@@ -94,7 +96,7 @@ while mask != 0:
     mask &= mask - 1
 ```
 
-When this loop is material, test:
+When matched profiling attributes target cost to this loop, test:
 
 ```text
 selected mask
@@ -106,7 +108,7 @@ packed selected positions
 
 Use vector, SWAR, BMI-style, or scalar fallback techniques as appropriate. Keep the parser-facing result independent of the backend when practical.
 
-Do not keep a more complex compaction scheme if the representative workload does not improve.
+Do not keep a more complex compaction scheme unless it passes the declared acceptance rule on the representative workload or removes required complexity elsewhere.
 
 ## 3. Keep a stable parser-facing batch contract
 
@@ -242,7 +244,7 @@ Do not force direct emission when:
 - tooling or diagnostics require the syntax representation;
 - multiple independent consumers use it;
 - direct emission complicates the producer more than one bounded packing pass;
-- measurement shows that the staging form is cheaper overall.
+- matched measurement shows that the staging form has lower total cost under the declared acceptance rule.
 
 ## Acceptance
 
