@@ -72,5 +72,6 @@ Read [Structural analysis](engineering/00-structural-analysis.md) first for any 
 | Authorization, transaction authority, migrations, recovery, wire checks, independent oracles | [Correctness boundaries](engineering/06-correctness-boundaries.md) |
 | Performance claims, red flags, decision table, review checklist, acceptance criteria | [Measurement and review](engineering/07-measurement-and-review.md) |
 | Concrete Rust transformations | [Examples](engineering/08-examples.md) |
+| Compiler/parser/tokenizer/IR lowering, wide classification, pointerless parsing, direct IR emission | [Wide pointerless compiler](engineering/09-wide-pointerless-compiler.md) |
 
 Read every block that applies. Mixed problems normally require more than one block. Do not use the examples as authority over a repository-specific contract.
