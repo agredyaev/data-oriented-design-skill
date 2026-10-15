@@ -46,7 +46,14 @@ Did the declared target pass?
 
 ### Example: local improvement, target unmet
 
-Extraction falls 8 ms -> 4 ms, but total workload remains ~100 ms and the target is <90 ms. Report the local phase improvement only; the end-to-end target remains unmet and the next step is to reprofile/rerank.
+Before:
+
+```rust
+let tokens = extract_events(mask)?;
+parse(&tokens)?;
+```
+
+A new extractor can reduce extraction from 8 ms to 4 ms while total workload stays ~100 ms against a <90 ms target. Keep the claim scoped to the extraction phase; the end-to-end target remains unmet. Reprofile/rerank before another change.
 
 ## Decision tree: review a suspicious construct
 
