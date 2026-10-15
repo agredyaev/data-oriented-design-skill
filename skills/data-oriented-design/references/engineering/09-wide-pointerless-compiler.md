@@ -27,7 +27,7 @@ Use these terms consistently:
 - `WITHIN BUDGET` — the path satisfies a declared bound.
 - `MEASURE` — evidence needed to choose the branch is missing.
 
-Do not make qualitative cost judgments from intuition. If no contract bound or measurement decides a branch, choose `MEASURE`.
+Do not make cost judgments from intuition. Missing consumer, lifetime or semantic facts are `UNKNOWN`: inspect them. If cost evidence is needed to choose, use `MEASURE`.
 
 ## Route broad redesigns
 
@@ -86,5 +86,5 @@ Use the existing general DOD packs instead of duplicating them:
 
 If the current question can be answered from the selected block, stop loading references.
 
-If two consecutive local compiler changes fail the declared target acceptance rule, stop local tuning. Return to Structural analysis and Pipeline elimination.
+If two consecutive local changes on the same representation fail the declared target acceptance rule, stop tuning it. Return to Structural analysis and Pipeline elimination for the affected scope.
 

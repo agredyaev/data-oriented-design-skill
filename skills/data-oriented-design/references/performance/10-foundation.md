@@ -11,9 +11,9 @@ Do you know who builds, owns, reads, updates, and emits the data?
       |      |-- NO -> Keep the data.
       |      '-- YES -> Record the release point.
       |
-      '-- Does reordering preserve canonical identity and output order?
-             |-- NO -> Keep canonical order or add an order index.
-             '-- YES -> Continue.
+      '-- Does reordering preserve identity, dependencies, errors and effects?
+             |-- NO -> Keep required order/identity; an output index cannot repair these.
+             '-- YES -> Preserve required emission order separately; see DOD-026.
 ```
 
 ### DOD-001 — Trace the data lifetime
@@ -75,18 +75,18 @@ Does work scale with N, M, Q, or U?
 ### DOD-004 decision tree
 
 ```text
-Does the current path exceed a stated budget?
- |-- NO -> Keep it. Report NO FINDING.
+Does the path fail a declared target or required budget?
+ |-- NO -> Keep it for this cost task. Report NO FINDING.
  '-- YES
       |
-      |-- Is the budget based on worst-case valid input?
-      |      |-- NO -> Add the missing bound.
-      |      '-- YES -> Evaluate a replacement.
+      |-- Are the target population and acceptance rule explicit?
+      |      |-- NO -> Specify them; do not invent a threshold.
+      |      '-- YES -> Evaluate a replacement; preserve hard bounds on all valid inputs.
 ```
 
 ### DOD-004 — Leave paths within budget unchanged
 - **Symptom:** A review proposes an index or cache for a collection whose access count and size already fit the stated budget.
-- **Action:** Keep the current representation when its worst-case work fits the budget. Include index-build and cache-maintenance work before proposing either addition.
+- **Action:** Keep the current representation when it meets the declared target and required budgets. A hard capacity bound covers all valid inputs; a percentile latency target needs the declared workload distribution. Do not substitute one for the other. Include index-build and cache-maintenance work before proposing either addition.
 - **Check:** Record element count, call count, and budget. If any value needed to decide is absent, mark the proposal `UNVERIFIED`.
 - **Example:** A 20-row linear scan run once at startup makes at most 20 comparisons. A new index adds build work to that single query. Report `NO FINDING` when the scan meets the startup budget.
 
@@ -97,8 +97,8 @@ Does the change alter layout, identity, order, or mutation behavior?
  |-- NO -> Run normal product tests.
  '-- YES
       |
-      |-- Is there an independent behavior oracle?
-      |      |-- NO -> Add one before acceptance.
+      |-- Do existing tests or an independent oracle cover affected behavior?
+      |      |-- NO -> Add the missing verification before acceptance.
       |      '-- YES
       |
       '-- Do stale IDs, errors, order, and serialization match?
@@ -123,18 +123,18 @@ Do before and after use the same workload?
       |      |-- NO -> Repeat the benchmark.
       |      '-- YES
       |
-      |-- Are build, query, update, memory, and wall costs measured?
+      |-- Are the target and affected build/query/update/memory/wall guardrails measured?
       |      |-- NO -> Complete the trade-off.
       |      '-- YES
       |
       '-- Do the predicted metric and target KPI pass the predeclared acceptance rule?
              |-- NO -> Reject the performance hypothesis.
-             '-- YES -> Accept if correctness also passes.
+             '-- YES -> Accept only if correctness and required guardrails also pass.
 ```
 
 ### DOD-012 — Measure the whole trade-off
 - **Symptom:** A layout change is accepted from byte arithmetic or a microbenchmark alone.
-- **Action:** Use identical before/after input. Record phase time, total time, allocations, retained bytes, peak bytes, reads, writes, and build/update cost. Report repetitions, variation, cold/warm state, and thread count. Measure related PMU events in small groups. Check multiplexing.
+- **Action:** Use identical before/after input. Measure the claimed metric and affected lifetime trade-offs: phase/total time, allocations, retained/peak bytes, reads/writes and build/update cost as relevant. State why an omitted cost cannot affect acceptance. Report repetitions, variation, cold/warm state and thread count. When using PMU evidence, measure related events in small groups and check multiplexing.
 - **Check:** Preserve correctness first. Confirm the predicted physical metric before you claim a performance win. Report producer, consumer, packing, update, and maintenance costs.
 - **Example:** An AoS→SoA split remains `O(N)` for a scan; claim a speed gain only after matched scan and whole-workload measurements.
 
@@ -173,6 +173,10 @@ Does the experiment depend on timing or PMU evidence?
       |
       |-- Are before/after workloads identical and repeated?
       |      |-- NO -> Benchmark is invalid.
+      |      '-- YES
+      |
+      |-- Is PMU evidence used?
+      |      |-- NO -> Use the matched timing evidence; no counters are required.
       |      '-- YES
       |
       |-- Are PMU event groups free from harmful multiplexing?

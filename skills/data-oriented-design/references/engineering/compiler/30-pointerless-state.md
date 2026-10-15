@@ -18,10 +18,13 @@ START
   |      |-- NO -> KEEP local pointers/references if simplest; stop this branch.
   |      '-- YES
   |
-  |-- Does the contract require stable address or independently owned object lifetime?
+  |-- Does the contract require stable address identity?
   |      |-- UNKNOWN -> resolve contract before changing ownership.
   |      |-- YES -> KEEP pointer/object ownership; name the requirement.
-  |      '-- NO -> USE typed ID, offset, or range.
+  |      '-- NO -> Can the proposed owner preserve every object's required lifetime?
+  |                    |-- UNKNOWN -> inspect owners/releases before flattening.
+  |                    |-- NO -> KEEP independent ownership; do not force one arena.
+  |                    '-- YES -> TEST typed IDs/offsets/ranges with checked validity.
   |
   |-- Does each retained row own a variable-size child allocation?
   |      |-- YES -> TEST flat side array + ranges/CSR.
@@ -79,16 +82,17 @@ Pointers and references remain valid for local scratch, FFI, stable-address cont
 Use this test:
 
 ```text
-Does the value need independent lifetime/ownership?
-  |-- NO -> dense root-owned storage + typed ID.
-  '-- YES
-       |
-       |-- Is stable address identity required?
-              |-- YES -> pointer/object ownership is valid.
-              '-- NO -> prefer dense storage + typed ID.
+Stable address required by a consumer/ABI?
+  |-- YES -> Preserve address stability; a numeric ID alone cannot supply it.
+  '-- NO -> Is root-owned lifetime sufficient for every consumer?
+              |-- YES -> Test dense storage + typed ID; preserve deletion/move validity.
+              '-- NO -> Preserve independent ownership, or design an explicit
+                         ownership/handle protocol before changing representation.
 ```
 
 State the specific requirement when a long-lived pointer remains.
+
+For example, frozen nodes destroyed with one compiler snapshot can use snapshot-scoped IDs. A plugin retaining a node after snapshot release needs a valid lifetime protocol; replacing its `Arc<Node>` with a snapshot index would dangle. Use [PWP decisions](profile/50-pwp-retained-state.md) for mutation, generations and range examples.
 
 ## 3. Flatten nested variable-size relations
 

@@ -18,9 +18,9 @@ Does a pass allocate or retain temporary state?
 
 ### DOD-010 — Keep passes and scratch local
 - **Symptom:** A pass allocates per row, writes shared mutable marks, or retains a cache for data used by one request.
-- **Action:** Reuse operation-local scratch sized to the maximum visited rows. Compute a derived value inside the request when it is used only there. Add a retained cache only when measured savings exceed build and invalidation cost. Keep the cache within the memory budget.
+- **Action:** Reuse operation-local scratch. Size queues for their maximum occupancy; size ID-indexed marks for the validated ID domain, or use explicit sparse/remapped storage. Include initialization/reset and concurrent request memory. Compute a derived value inside the request when it is used only there. Add a retained cache only when measured savings exceed build and invalidation cost within the memory budget.
 - **Check:** Count allocations per operation, scratch peak, concurrent behavior, and cache invalidation paths.
-- **Example:** A graph query uses a request-local visited array indexed by dense ID; no per-node allocation or shared lock is needed for the marks.
+- **Example:** Visiting only ID 999,999 still requires 1,000,000 entries in `visited[id]`, not one entry. If that exceeds the request budget, test sparse marks or a remapping; include their lookup/reset costs. Local marks need no shared lock.
 
 ### DOD-018 decision tree
 
@@ -113,24 +113,23 @@ Do repeated exact or range queries scan the same rows?
 ### DOD-024 decision tree
 
 ```text
-Do two or more passes visit the same data?
- |-- NO -> N/A.
- '-- YES
-      |
-      |-- Can fusion preserve order, errors, and dependencies?
-      |      |-- YES -> Test fusion.
-      |      '-- NO
-      |
-      |-- Does rare or cold work enlarge the hot loop?
-             |-- YES -> Test fission.
-             '-- NO -> Keep separate passes.
+Which measured symptom applies? Evaluate each applicable branch separately.
+ |-- Repeated passes over the same data
+ |      '-- Can fusion preserve dependencies, errors, effects and order?
+ |             |-- YES -> Test fusion; include register/code-size costs.
+ |             '-- NO -> Keep the required pass boundary.
+ |-- One hot loop contains rare/cold work
+ |      '-- Can cold work be deferred without changing effects, errors or order?
+ |             |-- YES -> Test fission; include queues and the extra traversal.
+ |             '-- NO -> Keep the required execution order.
+ '-- Neither -> N/A.
 ```
 
 ### DOD-024 — Fuse or split passes from measured reuse
 - **Symptom:** Several passes revisit the same data, or one hot loop contains rare cold work.
 - **Action:** Test fusion when passes can share hot data. Test fission when rare work pollutes the hot path.
 - **Check:** Preserve dependencies, errors, order, and output. Measure visits, cache behavior, phase time, and total time.
-- **Example:** Replace three full scans with one fused scan only when the merged loop preserves required ordering.
+- **Example:** Three independent scans can test fusion. A single loop updating scores and formatting rare diagnostics can test fission only if formatting may be deferred. If the first diagnostic must abort before later score updates, preserve that boundary. Include queued diagnostic IDs and the second pass in the comparison.
 
 ### DOD-025 decision tree
 
@@ -161,11 +160,15 @@ Does a key cause random access to stable companion data?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Can work order change without changing observable output?
-      |      |-- NO -> Use a separate order index.
+      |-- May computation reorder while preserving dependencies, errors and effects?
+      |      |-- NO -> Keep computation order; an output index cannot repair it.
       |      '-- YES
       |
-      '-- Is reorder cost lower than the saved random-access cost?
+      |-- Must emitted results retain canonical order?
+      |      |-- YES -> Include an order index and restoration cost.
+      |      '-- NO -> No restoration required.
+      |
+      '-- Is grouping + restoration cheaper than the saved random-access cost?
              |-- NO -> Keep the current order.
              '-- YES -> Test clustering or reordering.
 ```
@@ -174,7 +177,7 @@ Does a key cause random access to stable companion data?
 - **Symptom:** A stable key causes repeated random access to companion data.
 - **Action:** Group work by the key when the order can change safely.
 - **Check:** Include sort or reorder cost. Preserve canonical output with a separate order index when required.
-- **Example:** Group work by `parent_id`, process each parent group, then emit results in canonical order.
+- **Example:** Independent pure calculations can group by `parent_id` and restore input order with original indices. Ordered account withdrawals cannot reorder if earlier withdrawals affect later success; sorting their output cannot restore the original behavior.
 
 ### DOD-032 decision tree
 

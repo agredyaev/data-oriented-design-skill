@@ -113,7 +113,7 @@ Write this block before implementation:
 
 ```text
 HOTSPOT
-<operation and share of target time>
+<operation/state and contribution to the declared target metric>
 
 EVIDENCE
 <measurement that identifies the cost>
@@ -135,12 +135,31 @@ If the predicted physical metric does not move, reject the performance hypothesi
 
 ## Result classes
 
-Use one result class:
+Choose the adoption verdict first, then describe the supported benefits. Result classes may coexist; lead with the declared target.
 
-- **PERFORMANCE WIN** — target wall time improves, and the causal metric supports the hypothesis.
-- **MEMORY WIN** — memory or artifact size improves, but wall time does not.
-- **SCALABILITY WIN** — larger workloads improve more than small workloads.
-- **PARALLEL WIN** — thread scaling improves.
-- **NO EFFECT** — target metrics stay within noise.
-- **REGRESSION** — a target budget becomes worse.
+```text
+Required correctness violated? -> REJECT, regardless of measured benefits.
+Required budget/guardrail violated? -> REGRESSION; reject adoption.
+Required acceptance evidence missing? -> UNVERIFIED; do not claim acceptance.
+Declared target passes? -> Accept that result if added state has a justified lifetime/cost.
+Target does not pass? -> Report TARGET UNMET; retain only for a separately justified
+                        measured benefit or named structural simplification.
+```
+
+- **PERFORMANCE WIN** — the declared time/throughput metric passes, with supporting causal evidence; name its scope.
+- **MEMORY WIN** — the declared retained bytes, peak bytes or artifact size passes; name which one.
+- **SCALABILITY WIN** — the declared workload-scaling criterion passes; show the tested range.
+- **PARALLEL WIN** — the declared thread-scaling criterion passes.
+- **NO EFFECT** — the compared target metrics remain within measurement uncertainty.
+- **REGRESSION** — a required budget fails, or an agreed comparison identifies a meaningful worsening; report the magnitude.
+
+Illustrative decisions:
+
+| Before → after | Contract | Verdict |
+| --- | --- | --- |
+| retained 200 → 140 MB; latency 10 → 10 ms | retained ≤150 MB; latency ≤11 ms | MEMORY WIN; no speed claim |
+| retained 200 → 140 MB; latency 10 → 14 ms | same limits | REGRESSION; memory benefit does not permit adoption |
+| phase 8 → 4 ms; total 100 → 99 ms within ±3 ms | total ≤90 ms | phase benefit only; TARGET UNMET |
+
+Name any statistically supported worsening even if it stays within its guardrail. A result label must not hide the trade-off.
 

@@ -139,10 +139,15 @@ row.column
 candidate:
 row.start
 row.kind
+source bytes + lexical context for variable-width tokens
 line_starts[]
 
-derive end/line/column when used
+fixed-width kind: end = start + fixed_width(kind)
+variable-width kind: rescan retained source with the required lexical context
+line/byte-column: find preceding line start, then subtract
 ```
+
+`start` and `kind` alone cannot recover a variable-width token's end. If source/context is discarded, or rescanning breaches the read budget, retain the endpoint. User-visible character columns may need Unicode/tab handling rather than byte subtraction. Use [DOD-017](../performance/21-layout-and-encoding.md#dod-017-decision-tree) for exact derivation and lifetime checks.
 
 and:
 

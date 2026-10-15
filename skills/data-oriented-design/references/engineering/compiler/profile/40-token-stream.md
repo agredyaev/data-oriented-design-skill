@@ -28,6 +28,8 @@ The cursor starts at 2, then advances to 4, 6, and 7. These are token starts and
 
 For an optional one-byte length format, reserve zero as an escape only when zero-length tokens cannot occur. Example: extent 500 becomes `[0,244,1,0,0]` with an explicitly little-endian u32 escape. Check truncation, overflow, valid bounds, and cursor progress. If zero-length events exist, choose another encoding.
 
+For encoded extents, keep a decoding cursor distinct from the token index: this escape consumes five encoded bytes but advances one token and 500 source bytes. Do not index the encoded byte stream by token index as if every extent occupied one byte.
+
 ## Decision tree: fold whitespace and comments
 
 ```text

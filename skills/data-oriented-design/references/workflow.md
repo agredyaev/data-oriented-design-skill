@@ -1,8 +1,6 @@
 # Data-Oriented Design Workflow
 
-Use this file as the default full-route composition and the shared completion/reporting contract. Use [Module composition](modules.md) to select a single capability or assemble a different route. Focused explanations need only the relevant rule.
-
-Choose structural or profiler-driven execution through [Module composition](modules.md#choose-and-switch-routes). Steps below describe a full structural redesign, not a universal order. Reuse matching inputs/evidence and execute only missing prerequisites. Analysis-only work stops with its selected conclusion. Do not claim skipped verification passed.
+Use [Module composition](modules.md) for scoped modules or profiler execution. The steps below describe a full structural redesign; verification/reporting apply to any route. Reuse evidence, execute missing prerequisites only, and do not claim skipped verification passed.
 
 For a local fix with no representation, ownership, or boundary change, state affected behavior, make the fix, and verify it. No process map is required.
 
@@ -29,45 +27,9 @@ Unknown requirements are `UNKNOWN`. Do not invent them.
 
 ## 2. Draw the current process and data
 
-For a structural redesign, map only the affected input-to-output process. Use Mermaid when supported, or a compact typed table; use text diagrams when rendering is unavailable. Each operation must identify its input, output, state, and known call count. The following text illustrates the required information:
+Map only the affected input-to-output process using a typed table or Mermaid. For notation and counting examples, use [Mapping techniques](engineering/00-structural-analysis.md).
 
-```text
-[1] operation
-    in:  TypeA
-    out: TypeB
-    read/write: StateX
-        |
-        v
-[2] operation
-    in:  TypeB
-    out: TypeC
-```
-
-Annotate known costs on nodes or edges:
-
-```text
-calls
-items
-bytes
-allocations
-lookup
-parse
-normalize
-copy/clone
-serialize
-lock/refcount
-IPC/syscall
-state transition
-```
-
-Also map the retained data owned by the path. A typed table or rendered diagram can carry the same information as this text example:
-
-```text
-RootState
-  +-- container/type
-  +-- container/type
-  +-- relationship representation
-```
+Each operation needs input/output types, read/write state, and known call count. Annotate relevant items, bytes, allocations, lookups, parse/normalize/copy/serialize work, locks/refcounts, IPC/syscalls and state transitions. Do not invent unknown counts.
 
 For each retained structure identify:
 
@@ -99,7 +61,7 @@ An **element** is any:
 
 For each relevant element ask:
 
-| Question | If no |
+| Question to establish from contract/code | If no responsibility is found after inspection |
 | --- | --- |
 | Which contract requirement or current consumer requires it? | candidate to remove |
 | Why must it be a separate step/layer rather than merged with an adjacent step? | candidate to inline/merge |
@@ -120,17 +82,20 @@ LOCALIZE   temporary state does not need global/shared lifetime
 FLATTEN    object/pointer graph can become IDs/arrays/ranges
 BATCH      repeated calls/transitions can become one operation
 MEASURE    necessity depends on an unresolved cost
+UNKNOWN    required consumer/semantic fact is not yet established
 ```
+
+Absence of evidence is not evidence of no consumer. For `UNKNOWN`, inspect callers, persistence and lifetime before removal. `DERIVE` requires exact inputs and their lifetime; `FLATTEN` requires preserved identity and mutation semantics. These are candidates until their correctness and applicable cost gates pass.
 
 Do not require documentation for elements already obvious from the code and contract. Record only decisions that affect the design.
 
 ## 4. Design the replacement from the contract
 
-Create the candidate before changing the old object model. A candidate may keep the current process when code, contract, or measurement shows no justified simplification. Do not force a rewrite to satisfy the format.
+Create a candidate before changing the old object model. Keep the current process when no justified simplification exists.
 
 For a performance task, establish the baseline and measured bottleneck before selecting a transformation. Use [Performance diagnosis](performance/00-diagnosis.md) when the cause is unknown. Missing evidence permits a concrete candidate marked `UNVERIFIED`, but never an invented performance finding.
 
-Create a candidate process that solves the same contract with fewer explicit operations or less retained state, without adding more expensive invariants.
+Create a candidate that preserves the contract and targets a named recurring cost or unnecessary structure. An index can add state to remove repeated search; count its build, update, memory and identity costs. A simpler-looking map alone does not establish a faster candidate.
 
 ```text
 CURRENT
@@ -161,35 +126,17 @@ The candidate is valid only if every new element also passes the element-necessi
 
 Compare only metrics relevant to the task.
 
-For architecture/performance work, use this structural delta:
-
-| Metric | Current | Candidate |
-| --- | ---: | ---: |
-| process steps | | |
-| full passes | | |
-| retained representations | | |
-| independent allocations | | |
-| pointer/key lookups | | |
-| parse/normalize operations | | |
-| copies/clones | | |
-| locks/refcount operations | | |
-| IPC/protocol round-trips | | |
-| retained bytes | | |
+For a structural delta, compare current/candidate steps, passes, retained representations/bytes, allocations, pointer/key lookups, parse/normalize operations, copies, locks/refcounts and protocol round-trips. Include only changed or disputed counts.
 
 Use `?` when unknown.
 
-Prefer the candidate that:
-
-1. preserves the contract;
-2. removes more recurring work/state;
-3. adds fewer new invariants;
-4. meets the stated budget.
+Reject candidates that violate the contract or a required budget. Compare remaining candidates on the declared target, including lifetime costs. If evidence cannot distinguish them, retain the current design or measure the disputed cost. For structural simplification, name the eliminated responsibility-free element and any new invariants; do not infer speed from counts.
 
 Do not prefer a design merely because it changes fewer lines.
 
 ## 6. Implement one structural decision at a time
 
-Implement the highest-leverage accepted decision first.
+Implement one justified candidate first: the measured cause selected by the profiler route, or the structural removal whose consumers and replacement are established. Resolve required dependencies first. Implementation may be an experiment; adoption waits for verification.
 
 During implementation:
 
@@ -211,9 +158,10 @@ Add only the evidence required by the claim:
 | Claim | Required evidence |
 | --- | --- |
 | behavior preserved | relevant tests/code evidence |
-| memory reduced | matched retained/peak-memory evidence |
+| retained or peak memory reduced | matched evidence for that specific metric and lifecycle point |
 | allocations reduced | allocation evidence |
-| latency/throughput improved | matched end-to-end benchmark |
+| phase latency/throughput improved | matched benchmark of that phase; include new work moved outside it |
+| end-to-end latency/throughput improved | matched end-to-end benchmark |
 | scaling improved | multi-load or multi-thread scaling evidence |
 | abstraction/state removed | code/structure inspection plus tests |
 
@@ -228,7 +176,7 @@ Apply these gates to the selected scope. Analysis-only work completes with its c
 - the required contract still holds;
 - every added element has a concrete responsibility;
 - removed elements have no remaining required consumer;
-- the candidate process is no more complex than needed for the contract;
+- new construction, update, lifetime and identity obligations are accounted for;
 - any performance claim has matched evidence;
 - remaining unknowns are stated explicitly.
 
@@ -244,7 +192,7 @@ For a full architecture/performance redesign, use one compact report:
 4. **Verification and result** — behavior evidence; matched measurements for the claimed metric.
 5. **Unknowns** — missing evidence, rejected candidates, or remaining defects that affect the decision.
 
-Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `OUTSIDE DOD` for conclusions. Attach rule IDs only when they explain a decision. An unmeasured speed/memory proposal is `UNVERIFIED`; removing a named unnecessary layer may be accepted as structural simplification from code and behavior evidence.
+Use `FINDING` for a supported issue/result, `UNVERIFIED` for an unsupported claim, `NO FINDING` when the inspected scope yields no supported issue, or `OUTSIDE DOD` when the cause needs another method. Name the scope and next diagnostic action for the latter; it does not mean the user's problem is solved. Attach rule IDs only when they explain a decision. Removing a named unnecessary layer may be accepted as structural simplification from code and behavior evidence.
 
 Do not enumerate every considered rule, report `N/A` rows, repeat the same map in multiple sections, or create a separate artifact unless the task requires one. Include build/query/update/space costs only where the candidate changes them. Unknown values stay `?` or `UNKNOWN`.
 

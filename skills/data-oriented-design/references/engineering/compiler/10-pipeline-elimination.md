@@ -15,22 +15,24 @@ START
   |
   |-- Draw: INPUT -> stages -> REQUIRED OUTPUT.
   |
-  |-- For each stage R:
+  |-- For each intermediate representation R and the stage producing it:
   |      |
-  |      |-- Does R add information required downstream?
-  |      |      |-- UNKNOWN -> resolve consumers/contract before redesign.
-  |      |      |-- NO -> REMOVE or MERGE R.
-  |      |      '-- YES
+  |      |-- Are required computations, validation, consumers and lifetimes known?
+  |      |      |-- NO -> UNKNOWN; inspect them before proposing removal.
+  |      |      '-- YES -> preserve those responsibilities even if R is removed.
   |      |
-  |      |-- Is R consumed independently after the next stage?
-  |      |      |-- UNKNOWN -> inspect call graph/dataflow.
-  |      |      |-- YES -> KEEP R; name consumer and lifetime.
+  |      |-- Does a consumer/boundary require R separately from the next form?
+  |      |      |-- YES -> KEEP the required form; name consumer and lifetime.
   |      |      '-- NO
   |      |
-  |      |-- Can the producer emit the next representation without adding a worse accepted cost?
-  |             |-- UNKNOWN -> MEASURE with the smallest prototype.
-  |             |-- YES -> REMOVE R.
-  |             '-- NO -> KEEP the smallest staging form.
+  |      |-- Can the producer emit the next form preserving the required computation?
+  |      |      |-- NO -> KEEP staging required by dependencies/validation.
+  |      |      '-- YES -> compare a direct-emission candidate with current staging.
+  |      |
+  |      '-- Does the candidate pass correctness and the declared cost/structural goal?
+  |             |-- UNKNOWN -> prototype/verify; MEASURE disputed costs.
+  |             |-- YES -> REMOVE R's storage/pass; retain required computation.
+  |             '-- NO -> KEEP the current form or test a smaller staging form.
   |
   |-- Does a superseded production path remain?
   |      |-- YES -> MIGRATE/DELETE; keep only a temporary oracle if required.
@@ -39,7 +41,11 @@ START
   '-- Compare current and candidate pipeline counts.
 ```
 
-If a branch cannot be decided from code and contract evidence, mark it `MEASURE`; do not guess.
+Missing consumer/semantic facts are `UNKNOWN`; missing costs require `MEASURE`. Neither means that a stage is unnecessary.
+
+### Example: remove storage, preserve semantic work
+
+`parse → Ast → typecheck → TypedTree → lower → Ir` has no AST consumer after lowering. This makes the AST a candidate, not permission to delete type checking. Direct emission must still resolve names, reject invalid types and preserve contractual diagnostics. A formatter needing the AST keeps a syntax form. A later pass requiring a whole-program symbol table may require staging even without an external AST consumer.
 
 ## 1. Map the whole transformation
 
@@ -103,7 +109,7 @@ Keep a syntax tree, AST, or staging IR when at least one condition is true:
 - direct emission would make the producer more complex than one bounded packing pass;
 - matched measurement shows that the staging form lowers the declared target cost.
 
-Otherwise remove it.
+If none applies and required computation can move safely, test removal. Unknown dependencies or costs are unresolved prerequisites, not a removal decision.
 
 Do not preserve a layer because existing classes or APIs happen to expose it.
 
@@ -128,27 +134,26 @@ If the layer adds no required information and the producer can emit the target f
 Use this rule:
 
 ```text
-Does layer L add required information?
-  |-- YES -> keep only if a distinct consumer or lifetime requires L.
-  '-- NO
-       |
-       |-- Is L only a layout conversion?
-       |      |-- NO -> delete L.
-       |      '-- YES
-       |
-       |-- Can the producer emit the target layout without adding
-       |   persistent state, a full pass, or a separately accepted invariant?
-              |-- YES -> remove L.
-              '-- NO -> keep one bounded packing pass and measure its net cost.
+Does L compute or validate required facts?
+  |-- YES -> Preserve that computation; use the main tree to decide separate storage.
+  '-- NO -> Does L provide a required boundary or consumer representation?
+              |-- YES -> Preserve that responsibility; test how it is produced.
+              '-- NO -> Is L a layout conversion for a measured downstream benefit?
+                           |-- NO -> Test deletion after verifying all consumers.
+                           '-- YES -> Compare direct production with one packing pass.
+                                      Accept only the option meeting the declared target
+                                      and guardrails, including producer/packing costs.
 ```
 
-A packing pass is accepted only when:
+A packing pass introduced for speed must satisfy:
 
 ```text
 packing cost < downstream savings
 ```
 
 for the representative workload.
+
+For example, a layout-only pass adds no semantic information, but its 2 ms packing cost can repay 8 ms across repeated consumers. Keep it for that measured benefit if direct production does not perform better within the same budgets. For a memory target, measure retained and peak bytes instead of requiring a speed win; retain the latency guardrail.
 
 ## 6. Keep one canonical production path
 

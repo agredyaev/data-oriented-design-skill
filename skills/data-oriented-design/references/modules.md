@@ -8,7 +8,7 @@ Select capabilities by the result requested. Modules are independent instruction
 | --- | --- | --- | --- | --- |
 | Contract | clarify required behavior | task, consumers, external boundaries | required input/output, invariants, bounds, unknowns | [Contract](workflow.md#1-fix-the-contract) |
 | Process/data map | understand current transformations/state | affected code or a supplied design | typed operations, owners, lifetimes, consumers, known counts | [Mapping techniques](engineering/00-structural-analysis.md) |
-| Necessity | decide which element should exist | relevant element, contract/consumer, ownership/lifetime | KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH/MEASURE with reason | [Element test](workflow.md#3-apply-the-element-necessity-test) |
+| Necessity | decide which element should exist | relevant element, contract/consumer, ownership/lifetime | KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH or MEASURE/UNKNOWN with reason | [Element test](workflow.md#3-apply-the-element-necessity-test) |
 | Data representation | choose identity, relations, storage | relevant contract, access/mutation pattern, bounds/lifetime | candidate types and trade-offs; unknown costs remain unverified | [Data shape](engineering/01-data-shape.md), [Canonical state](engineering/02-canonical-and-derived.md) |
 | Ownership | evaluate sharing and synchronization | owners, lifetimes, concurrent access, FFI boundaries | ownership decision; required locks/handles retained | [Ownership](engineering/04-ownership-and-concurrency.md) |
 | Work elimination | remove repeated operations/layers | affected operations, consumers, frequency, required boundaries | proposed eliminated/merged work and preserved behavior | [Hot-path work](engineering/03-hot-path-work.md), [YAGNI](engineering/05-yagni-and-cleanup.md) |
@@ -16,7 +16,8 @@ Select capabilities by the result requested. Modules are independent instruction
 | Experiment | evaluate a concrete cost claim | candidate/hypothesis, baseline, workload, acceptance rule | matched evidence and accepted/rejected/unverified claim | [Measurement](performance/01-measurement.md), [Acceptance](performance/10-foundation.md) |
 | Correctness | assess a proposed/implemented change | affected contract, code/design diff, relevant tests/oracle | preserved/violated invariants and missing verification | [Correctness boundaries](engineering/06-correctness-boundaries.md) |
 | Implementation | execute an accepted decision | scoped contract, concrete decision, affected code | changed code, superseded state removed, verification result | [Implementation](workflow.md#6-implement-one-structural-decision-at-a-time), [Verification](workflow.md#7-verify-proportionally) |
-| PWP / 512-byte profile | selected 512-byte contract or measured lexical cause | grammar, source lifetime, backend targets; cost evidence for speed claims | selected mask/compaction/lookup technique and parity gates | [PWP/512 profile](engineering/compiler/25-pwp-512-profile.md) |
+| PWP retained state | retained pointers, children, derived fields, builder lifetime | owners/lifetimes, mutation, consumers, affected contract | keep/replace decision and identity/lifetime checks | [PWP decisions](engineering/compiler/profile/50-pwp-retained-state.md) |
+| 512-byte / lexical profile | selected batch contract or measured lexical cause | grammar, source lifetime, backend targets; cost evidence for speed claims | selected mask/compaction/lookup technique and parity gates | [512 profile](engineering/compiler/25-pwp-512-profile.md) |
 | Compiler specialization | apply a compiler-specific decision | relevant pipeline, lexical, retained-state, or validation inputs | result of the selected compiler block | [Compiler router](engineering/09-wide-pointerless-compiler.md) |
 
 ## Composition rules
@@ -35,18 +36,21 @@ Select from the question and available evidence. Neither route takes precedence 
 
 | Situation | Start | Next decision |
 | --- | --- | --- |
-| broad redesign, unclear state/ownership, no trusted cost attribution | structural route | map current contract/process/data, remove unnecessary elements, compare a candidate |
+| broad redesign or unclear state/ownership | structural route | map current contract/process/data, test necessity, compare a candidate |
+| performance target but missing/unreliable profile | performance diagnosis | establish matched baseline and relevant attribution before choosing a transformation |
 | trusted profile identifies target cost | profiler route | rank measured hotspots and iterate the most relevant actionable cause |
 | one focused question or supplied candidate | individual module | consume its minimum inputs and stop with its result |
 | evidence insufficient to choose | smallest missing-input module | inspect the affected path or measure; do not invent a ranking |
 
 **Structural route:** Contract → Process/data map → Necessity → selected representation/ownership/work modules → candidate comparison → Implementation/Correctness → Experiment when claiming a cost improvement. A measurement can occur anywhere a design choice requires it.
 
+A profile is usable when its workload, build, metric, and scope match the target and the measurement method is checked. If they do not match, obtain the missing evidence. A CPU-sample profile alone does not attribute blocked wall time or retained memory.
+
 **Profiler route:**
 
 1. Fix the target, representative workload, conditions, and acceptance rule. Inspect the current profile; obtain a baseline if missing.
 2. Rank costs by measured contribution to that target. Distinguish CPU samples, elapsed time, allocations, retained memory, and waits. Do not add overlapping inclusive costs or infer an end-to-end gain directly from a sample percentage.
-3. Select the highest-impact actionable cause supported by evidence. A lower-ranked cause can come first when a shared prerequisite, contract constraint, or bounded experiment justifies it; state that reason. Do not optimize unrelated top entries.
+3. Select the cause with the largest supported contribution to the unmet target that can be changed within the contract/scope. When attribution cannot distinguish candidates, run a bounded diagnostic experiment instead of guessing their rank. A lower-ranked cause can come first for a shared prerequisite or contract constraint; state that reason. Do not optimize unrelated top entries.
 4. Inspect only the affected path, its contract/consumers, and access pattern. Check necessity locally. Select the matching module/rule, form a concrete candidate and falsifiable prediction, then implement one causal change and verify behavior.
 5. Repeat matched measurement, validate the causal metric and declared target, and reprofile. Keep, reject, or narrow the claim using the acceptance evidence. Rerank from the new profile; do not continue using the old top list after the workload/cost distribution changes.
 6. Stop when the target passes or no supported change remains in scope. Report unresolved cost/evidence explicitly.
@@ -65,6 +69,8 @@ After a change invalidates an earlier assumption, revisit only dependent decisio
 | “Map this path; do not redesign it” | Process/data map | affected typed map and known counts; no candidate required |
 | “Find duplicated state” | Canonical-state part of Data representation + Necessity | authorities/consumers identified; duplication conclusions supported |
 | “Verify this claimed speedup” | Experiment + Correctness; Diagnosis if causal evidence is missing | supported result class or explicit missing evidence; no forced rewrite |
+| “Latency is high; no profile yet” | Diagnosis → baseline and wall-time attribution | cause or missing evidence; no inferred SoA/512 rewrite |
+| “Use PWP for this frozen graph; there is no lexer” | PWP retained state → identity/lifetime checks | justified pointer/ID/range choice; no batch-width analysis |
 | “Simplify this full pipeline and implement it” | Contract → Map → Necessity → candidate modules → Implementation + Correctness; Experiment for cost claims | affected contract preserved and claimed result supported |
 
 ## Extend a capability

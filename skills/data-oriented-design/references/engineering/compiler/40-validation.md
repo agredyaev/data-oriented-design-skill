@@ -19,26 +19,33 @@ START
   |      |             '-- YES -> continue.
   |      '-- NO -> continue.
   |
-  |-- Was a physical/logical cause and acceptance rule declared before implementation?
-  |      |-- NO -> classify as architecture experiment; do not claim causal speedup.
+  |-- Is a cost improvement claimed?
+  |      |-- NO -> verify a named representation/pass/invariant was removed,
+  |      |        account for new obligations and required budgets; accept only
+  |      |        that structural result. Do not require a speedup.
+  |      '-- YES -> declare target metric, causal prediction and guardrails.
+  |
+  |-- Is matched evidence available for the cause, target and affected guardrails?
+  |      |-- NO -> UNVERIFIED; obtain evidence before cost acceptance.
   |      '-- YES
   |
   |-- Did the predicted causal metric pass its acceptance rule?
   |      |-- NO -> REJECT the performance hypothesis.
   |      '-- YES
   |
-  |-- Did the target phase pass its acceptance rule?
-  |      |-- NO -> classify result without phase-speed claim.
+  |-- Did all required guardrails pass?
+  |      |-- NO -> REJECT adoption, even if the primary metric improved.
   |      '-- YES
   |
-  |-- Was end-to-end improvement part of the goal?
-         |-- NO -> classify the proven phase/result only.
-         '-- YES
-              |
-              |-- Did end-to-end KPI pass its acceptance rule?
-                     |-- NO -> do not claim end-to-end win.
-                     '-- YES -> ACCEPT if all added state/invariants have named responsibility and budget.
+  '-- Did the declared target pass (memory, phase, end-to-end, or scaling)?
+         |-- NO -> TARGET UNMET; report any narrower supported benefit.
+         '-- YES -> ACCEPT for that metric if added state/invariants have
+                    a named responsibility, lifecycle and budget.
 ```
+
+### Example: a valid memory result
+
+Suppose the target is retained compiler state ≤150 MB and compile time ≤110 ms. Matched runs show 200 →140 MB and 100 →102 ms; correctness passes. This is a memory win if uncertainty still satisfies both limits, with a reported time trade-off. At 120 ms, reject adoption even though memory improved. A 4 ms lexer gain alone does not establish an end-to-end win.
 
 ## 1. Reject benchmark-only architecture
 
@@ -84,7 +91,10 @@ PREDICTION
 metric(s) that must move
 
 TARGET
-phase/end-to-end metric that must improve
+retained/peak bytes, phase/end-to-end time, throughput or scaling criterion
+
+GUARDRAILS
+required limits that must still pass
 
 INVARIANTS
 semantic behavior that must remain unchanged
@@ -130,6 +140,8 @@ explicit parse / unsupported / semantic error
 
 Never convert unsupported syntax into silently different semantics for speed.
 
+If the existing accepted-input contract includes that syntax, rejecting it is also a regression. Implement it or route it to a correct required fallback; an explicit error is acceptable only where the contract permits rejection.
+
 ## 6. Keep an optimization only for a named result
 
 Classify the outcome:
@@ -149,8 +161,11 @@ Decision:
 correctness failed
     -> reject
 
+required budget/guardrail failed
+    -> reject adoption, even if another metric improved
+
 correctness passed + target improved
-    -> keep if every added representation/invariant has a named responsibility and stays within its declared budget
+    -> keep only when guardrails pass and every added representation/invariant has a named responsibility and stays within its declared budget
 
 correctness passed + target unchanged
     -> keep only for a separate measured benefit
@@ -165,7 +180,7 @@ Do not call a storage win a speed win.
 
 ## 7. Execution and reporting
 
-Follow [Workflow](../../workflow.md) for the redesign sequence and proportional report. Use the compiler router to select a block for each diagnosed cause. This file adds compiler-specific correctness and measurement gates, not a second workflow.
+Use [Module composition](../../modules.md#choose-and-switch-routes) for route selection and [Workflow](../../workflow.md#proportional-result-format) for proportional reporting. This file adds compiler-specific correctness and measurement gates, not a second workflow.
 
 ## 8. Generic target architecture
 

@@ -14,7 +14,7 @@ logical work
 + I/O cost
 ```
 
-Optimize in this order:
+Within the selected cause, check these opportunities in order; this is not a mandatory sequence across unrelated hotspots:
 
 1. Remove unnecessary work.
 2. Remove repeated work.
@@ -28,14 +28,14 @@ Optimize in this order:
 For repeated profiler-led optimization, use [Profiler route](../modules.md#choose-and-switch-routes). Rank costs against the declared target, change one cause, then reprofile and rerank. The following steps describe one experiment, not a mandatory whole-system redesign.
 
 1. Freeze the workload and benchmark conditions.
-2. Test scaling with `N`, `2N`, and `4N`.
-3. Find the phase and operation that dominate wall time.
+2. Test scaling with `N`, `2N`, and `4N` when work growth is in question; keep the distribution comparable.
+3. Attribute the declared metric: elapsed time, throughput, retained/peak memory, or artifact size.
 4. Classify the bottleneck before you select a DOD change.
 5. Record the access pattern for the hot operation.
 6. Select the smallest change that targets the measured cause.
 7. Write a falsifiable prediction before implementation.
 8. Measure the predicted physical metric after the change.
-9. Measure phase time, total time, memory, and correctness.
+9. Verify correctness and measure the declared target plus affected guardrails. Report phase and total time separately for speed claims.
 
 Use the same input for the before and after runs. Declare an acceptance rule before implementation. Use repeated runs to estimate uncertainty. Separate cold, warm, and incremental workloads when they have different behavior.
 
@@ -140,10 +140,11 @@ START
  |
  |-- Does N -> 2N cause more work than the required result explains?
  |      |-- YES -> Fix algorithmic work or repeated visits. Use DOD-003 or DOD-018.
- |      '-- NO
+ |      '-- NO / not relevant to this target -> continue.
  |
- |-- Can the hot phase move the required end-to-end KPI?
- |      |-- NO -> Stop. Amdahl's law limits the possible gain.
+ |-- Can this operation/state materially affect the declared target metric?
+ |      |-- UNKNOWN -> Attribute that metric before choosing a transformation.
+ |      |-- NO -> Select another cause. Use Amdahl's bound only for elapsed-time goals.
  |      '-- YES
  |
  |-- What limits the hot operation?
@@ -194,14 +195,16 @@ START
  |      |-- NO -> Reject the performance hypothesis.
  |      '-- YES
  |
- |-- Did the target phase pass the declared acceptance rule?
- |      |-- NO -> Classify the result without claiming a performance win.
+ |-- Did correctness and all required guardrails pass?
+ |      |-- NO -> Reject adoption; report the violation even if another metric improved.
  |      '-- YES
  |
- '-- Did end-to-end KPI and correctness pass?
-        |-- NO -> Reject or narrow the change.
-        '-- YES -> Adopt.
+ '-- Did the declared target metric pass its acceptance rule?
+        |-- NO -> Target unmet. Reject or justify a separate supported benefit.
+        '-- YES -> Adopt for that metric; do not infer other gains.
 ```
+
+For example, a retained-memory target may pass at unchanged phase time. A phase-only speedup does not meet an end-to-end latency target by itself. Use [result classification](01-measurement.md#result-classes) for guardrail precedence and partial results. If cost evidence is missing, the change remains `UNVERIFIED`.
 
 ## Transformation map
 

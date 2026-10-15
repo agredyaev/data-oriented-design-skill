@@ -4,7 +4,7 @@ Use this file as a router. Load the smallest performance block that answers the 
 
 ## Start here
 
-For a performance task, read [Performance diagnosis](performance/00-diagnosis.md) first. It contains the core cost model, workload/scaling gates, bottleneck classification, global decision tree, transformation map, and code signatures.
+When the cause is not established, start with [Performance diagnosis](performance/00-diagnosis.md): cost model, workload/scaling gates, bottlenecks, access patterns and rule selection. For a supplied cause with matching evidence, select its rule pack directly below; do not repeat diagnosis merely to satisfy order.
 
 Read [Performance measurement and reporting](performance/01-measurement.md) when establishing a benchmark, making a performance claim, evaluating concurrency, or reporting a result.
 
@@ -20,7 +20,7 @@ After diagnosis, load only the rule pack that contains the selected rule IDs:
 
 ## Loading rule
 
-Do not load all rule packs by default. Use [Performance diagnosis](performance/00-diagnosis.md) to select a rule family, then open the relevant pack. Load another pack only when the finding crosses that boundary.
+Do not load all rule packs by default. Select a family from existing evidence or Diagnosis. Load another pack only when the finding crosses that boundary.
 
 For a broad structural redesign, use [Structural analysis](engineering/00-structural-analysis.md). For profiler-led work, use [Route selection](modules.md#choose-and-switch-routes) and inspect the selected hotspot first. Check whether a mechanism can be removed before tuning it; expand to a structural map when the cause requires one.
 

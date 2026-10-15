@@ -2,17 +2,15 @@
 
 Use this block for tokenizer and parser-front-end costs. Typical signals are lexical classification, token extraction, parser staging, or repeated lexical decoding.
 
-Do not introduce SIMD or a custom token format before measuring the frontend cost.
-
-A representation-removal change may proceed without a speed claim when code evidence is sufficient.
+For a speed claim, measure the frontend cost before selecting SIMD or a custom token format. For a memory goal, establish retained-state evidence and the latency guardrail. A representation-removal change may proceed as structural simplification from code and behavior evidence, without a speed claim.
 
 ## Decision tree
 
 ```text
 START
   |
-  |-- Is frontend/tokenization part of the declared target?
-  |      |-- UNKNOWN -> MEASURE.
+  |-- Does this frontend representation/operation affect the requested result?
+  |      |-- UNKNOWN -> inspect consumers for structural tasks; measure cost for cost claims.
   |      |-- NO -> STOP; do not optimize this block.
   |      '-- YES
   |
@@ -37,7 +35,7 @@ START
          |      -> KEEP current frontend; diagnose another cause.
          |
          '-- evidence missing for the suspected cause
-                -> MEASURE before changing representation.
+                -> inspect semantic facts or MEASURE the missing cost before adopting.
 ```
 
 Any transformation that changes lexical or parsing semantics must pass the semantic-equivalence and fail-closed gates in `40-validation.md`.
@@ -259,7 +257,9 @@ A wide frontend change is accepted only when:
 - accepted and rejected inputs remain correct;
 - cross-block lexical state is covered;
 - unsupported syntax fails explicitly;
-- the predicted physical metric changes;
-- the target frontend phase improves if speed is claimed;
+- cost claims have the predicted causal evidence and pass the declared target;
+- a structural-only change removes a named unnecessary representation or pass;
+- required memory/latency guardrails pass;
+- the target frontend phase improves if phase speed is claimed;
 - end-to-end performance is reported separately.
 

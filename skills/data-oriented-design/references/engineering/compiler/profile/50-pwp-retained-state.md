@@ -40,9 +40,9 @@ Do range endpoints fit the selected integer width for every valid input?
   NO -> keep a wider field or reject oversized input by the existing contract.
 ```
 
-### Example: remove three child allocations
+### Example: flatten child buffers
 
-Before: child vectors `[[A,B],[],[C]]`. Candidate: `children=[A,B,C]`, `offsets=[0,2,2,3]`. Parent 1 reads the empty range `[2,2)`; parent 2 reads `[2,3)`. This removes per-parent child allocations, not the child payload bytes. Appending D to parent 0 is not O(1) in this frozen layout; retain another representation if that operation is contractual.
+Before: child vectors `[[A,B],[],[C]]`. Candidate: `children=[A,B,C]`, `offsets=[0,2,2,3]`. Parent 1 reads the empty range `[2,2)`; parent 2 reads `[2,3)`. Two nonempty child buffers can become one; the empty vector need not allocate. Payload bytes remain. Appending D to parent 0 is not O(1) in this frozen layout; retain another representation if that operation is contractual.
 
 ## Decision tree: store or derive a field
 

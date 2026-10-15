@@ -147,7 +147,7 @@ Do rows store several independent boolean fields?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Does a mask reduce the final aligned row size?
+      |-- Does a mask shrink aligned size OR have a grouped-access benefit to test?
       |      |-- NO -> Keep explicit fields.
       |      '-- YES
       |
@@ -160,7 +160,7 @@ Do rows store several independent boolean fields?
 - **Symptom:** Each of `N` rows stores separate boolean fields that are read or serialized as a group.
 - **Action:** Assign a fixed bit position to each flag and store one integer mask. Replace field reads/writes with named bit tests and updates. Use this layout only when the aligned row shrinks or grouped flag access meets a stated budget.
 - **Check:** Verify each flag combination, default value, and serialized meaning. Compare actual row bytes and flag-read/update time. If multiple threads update different flags in one mask, account for synchronization and contention.
-- **Example:** In a runtime with 1 B booleans, eight flags occupy 8 B before padding; one 8-bit mask occupies 1 B before padding. An `N=10,000` row array saves up to `70 KB` in raw flag bytes, but may save `0 B` after row alignment; measure the final row size.
+- **Example:** In a runtime with 1 B booleans, eight flags occupy 8 B before padding; one 8-bit mask occupies 1 B. At `N=10,000`, raw flag bytes fall by `70 KB`, but aligned rows may save `0 B`. With unchanged row size, a frequent combined flag test can still justify an experiment; accept only its measured time benefit within update/synchronization budgets.
 
 ### DOD-027 decision tree
 
@@ -191,17 +191,21 @@ Does growth cause reallocations or copied bytes in a hot build path?
  |-- NO -> N/A.
  '-- YES
       |
-      |-- Is exact or bounded output cardinality known before growth?
-      |      |-- YES -> Reserve the required capacity.
+      |-- Is exact output cardinality known before growth?
+      |      |-- YES -> Validate byte-size arithmetic and memory limit, then reserve.
       |      '-- NO
       |
-      '-- Can a measured estimate reduce growth without excessive unused capacity?
-             |-- NO -> Keep dynamic growth.
-             '-- YES -> Reserve from the estimate.
+      |-- Is a safe upper bound known AND does reserving it fit peak/retained limits?
+      |      |-- YES -> Test bounded reservation; count unused capacity.
+      |      '-- NO -> Do not reserve the legal maximum merely because it is known.
+      |
+      '-- Does a measured estimate reduce total build cost within memory limits?
+             |-- NO -> Keep checked dynamic growth.
+             '-- YES -> Reserve from the estimate; permit checked growth beyond it.
 ```
 
 ### DOD-033 — Preallocate from known or measured cardinality
 - **Symptom:** A hot build path repeatedly grows arrays and copies retained elements.
-- **Action:** Reserve exact capacity when the size is known. Otherwise, reserve from a measured bound or estimate.
+- **Action:** Validate cardinality-to-byte arithmetic and allocation limits before reservation. Reserve exact capacity when known and feasible. Otherwise test a bounded reservation or measured estimate against growth cost and memory limits. An estimate is not an accepted-input bound; keep checked growth or the contractual failure path.
 - **Check:** Measure reallocations, copied bytes, unused capacity, peak bytes, and build time.
-- **Example:** Reserve token storage from an input-size estimate when the estimate reduces growth without excessive unused memory.
+- **Example:** A legal upper bound of 1 billion 16 B entries would reserve 16 GB. With a 128 MB budget and typical output of 2,000 entries, reject that reservation. Test a measured small estimate with checked growth; do not reject valid larger outputs merely because they exceed the estimate.
