@@ -10,6 +10,7 @@ PERFORMANCE_ROUTER = ROOT / "references/performance-methodology.md"
 PERFORMANCE_DIR = ROOT / "references/performance"
 ENGINEERING_ROUTER = ROOT / "references/dod-yagni-engineering-rules.md"
 STRUCTURAL = ROOT / "references/engineering/00-structural-analysis.md"
+COMPILER_MODULE = ROOT / "references/engineering/09-wide-pointerless-compiler.md"
 README = Path("README.md")
 
 errors = []
@@ -20,6 +21,7 @@ required_files = [
     PERFORMANCE_ROUTER,
     ENGINEERING_ROUTER,
     STRUCTURAL,
+    COMPILER_MODULE,
     PERFORMANCE_DIR / "00-diagnosis.md",
     PERFORMANCE_DIR / "01-measurement.md",
     PERFORMANCE_DIR / "10-foundation.md",
@@ -43,6 +45,7 @@ skill = SKILL.read_text(encoding="utf-8")
 workflow = WORKFLOW.read_text(encoding="utf-8")
 performance_router = PERFORMANCE_ROUTER.read_text(encoding="utf-8")
 structural = STRUCTURAL.read_text(encoding="utf-8")
+compiler_module = COMPILER_MODULE.read_text(encoding="utf-8")
 readme = README.read_text(encoding="utf-8")
 
 # Router must remain small and selective.
@@ -192,6 +195,52 @@ for phrase in [
 ]:
     if phrase not in structural:
         errors.append(f"Structural analysis missing section: {phrase}")
+
+# Wide/pointerless compiler module must remain fully routed and cover the source methodology.
+for phrase in [
+    "Wide pointerless compiler",
+    "09-wide-pointerless-compiler.md",
+]:
+    if phrase not in skill and phrase not in readme:
+        errors.append(f"Compiler module is not surfaced: {phrase}")
+
+for phrase in [
+    "# Wide, Pointerless Compiler Design",
+    "## 1. Start from the whole process",
+    "## 2. Eliminate representations before local optimization",
+    "## 3. Decide whether an intermediate representation should exist",
+    "## 4. Wide tokenization: classify batches, not individual bytes",
+    "## 5. Batch extraction instead of branch-per-event extraction",
+    "## 6. Keep a stable frontend batch contract",
+    "## 7. Store the minimum token information",
+    "## 8. Fold insignificant bytes into progress metadata",
+    "## 9. Decode keywords and lexical identity once",
+    "## 10. Use pointerless parser state",
+    "## 11. Emit IR directly when syntax staging adds no independent value",
+    "## 12. Programming Without Pointers: long-lived relation rule",
+    "## 13. Decide pointer/object versus index explicitly",
+    "## 14. Flatten nested containers into ranges/CSR",
+    "## 15. Pool repeated or numerous strings",
+    "## 16. Resolve logical identity once",
+    "## 17. Separate builder and frozen representations",
+    "## 18. Choose fixed array, exact allocation, or growable builder from cardinality",
+    "## 19. Reject benchmark-only optimization layers",
+    "## 20. Keep one canonical production path",
+    "## 21. Delete legacy code by observable responsibility",
+    "## 22. Detect duplicate semantic layers",
+    "## 23. Decide whether a layer adds information or only changes layout",
+    "## 24. Separate hot semantic state from cold metadata",
+    "## 25. Fuse semantic passes when the same data is already hot",
+    "## 26. Measure compiler stages independently",
+    "## 27. Keep an optimization only after causal validation",
+    "## 28. Compare semantic outputs when representations change",
+    "## 29. Fail closed on unsupported syntax or semantics",
+    "## 30. Complete decision process",
+    "## 31. Reference target architecture",
+    "## Coverage checklist for this module",
+]:
+    if phrase not in compiler_module:
+        errors.append(f"Compiler methodology coverage missing: {phrase}")
 
 # Markdown fences must remain balanced.
 for path in ROOT.rglob("*.md"):
