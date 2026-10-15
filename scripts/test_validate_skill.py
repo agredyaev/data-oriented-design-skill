@@ -146,5 +146,34 @@ class ValidateSkillTests(unittest.TestCase):
             'broad compiler/frontend redesign', 'compiler work', 1))
         self.assert_invalid('Module routes must include broad compiler/frontend redesign')
 
+
+    def test_correctness_block_requires_decision_trees(self):
+        path = self.skill / 'references/engineering/06-correctness-boundaries.md'
+        path.write_text(path.read_text().replace('## Decision tree:', '## Advice:'))
+        self.assert_invalid('General engineering block has no decision trees')
+
+    def test_general_block_requires_concrete_code_example(self):
+        path = self.skill / 'references/engineering/04-ownership-and-concurrency.md'
+        text = path.read_text()
+        path.write_text(text.replace('rust', 'text'))
+        self.assert_invalid('General engineering block lacks a concrete code example')
+
+    def test_compiler_redesign_does_not_force_structural_first(self):
+        path = self.skill / 'references/engineering/09-wide-pointerless-compiler.md'
+        text = path.read_text()
+        old = '1. use the typed contract/process/data map required by the workflow;'
+        new = '1. read [Structural analysis](00-structural-analysis.md);'
+        path.write_text(text.replace(old, new))
+        self.assert_invalid('Broad compiler route must not force Structural analysis before Pipeline elimination')
+
+    def test_repeated_pass_signature_routes_to_dod_024(self):
+        path = self.skill / 'references/performance/00-diagnosis.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            '| Several full passes use the same data | Fuse, split, or block the passes when semantics allow | DOD-024, DOD-025 |',
+            '| Several full passes use the same data | Fuse or block the passes when semantics allow | DOD-003, DOD-010 |',
+        ))
+        self.assert_invalid('Repeated-pass code signature must route to DOD-024')
+
 if __name__ == '__main__':
     unittest.main()

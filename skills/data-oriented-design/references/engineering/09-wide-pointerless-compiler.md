@@ -33,9 +33,10 @@ Do not make cost judgments from intuition. Missing consumer, lifetime or semanti
 
 For a full compiler/frontend redesign:
 
-1. read [Structural analysis](00-structural-analysis.md);
-2. read [Pipeline elimination](compiler/10-pipeline-elimination.md);
-3. load one additional compiler block only for the first accepted structural candidate.
+1. use the typed contract/process/data map required by the workflow;
+2. read [Pipeline elimination](compiler/10-pipeline-elimination.md) first;
+3. load [Structural analysis](00-structural-analysis.md) only when the workflow map lacks a mapping/counting technique needed for this pipeline;
+4. load one additional compiler block only for the first accepted structural candidate.
 
 For a full redesign, establish current/candidate pipelines before selecting SIMD, SoA, CSR, interning, or packing. For a profiler-led task, start with the diagnosed hotspot and its required inputs under [Route selection](../modules.md#choose-and-switch-routes); expand structural scope only when the cause requires it.
 

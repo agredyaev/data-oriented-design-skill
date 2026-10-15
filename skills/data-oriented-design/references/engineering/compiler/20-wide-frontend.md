@@ -29,7 +29,7 @@ START
          |      -> DECODE/RESOLVE once and carry typed identity.
          |
          |-- staging tree immediately lowered with no independent consumer
-         |      -> DIRECT EMIT or keep one minimal staging form.
+         |      -> TEST direct emission; REMOVE staging only after validation.
          |
          |-- none of the above
          |      -> KEEP current frontend; diagnose another cause.

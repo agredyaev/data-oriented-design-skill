@@ -25,6 +25,7 @@ GENERAL_DECISION_BLOCKS = (
     'references/engineering/03-hot-path-work.md',
     'references/engineering/04-ownership-and-concurrency.md',
     'references/engineering/05-yagni-and-cleanup.md',
+    'references/engineering/06-correctness-boundaries.md',
     'references/engineering/07-measurement-and-review.md',
 )
 
@@ -216,6 +217,27 @@ def validate(repo):
                 errors.append(f'General decision tree is empty: {relative}: {title}')
             if not re.search(r'^### Example:', section, re.M):
                 errors.append(f'General decision tree lacks a worked example: {relative}: {title}')
+        if not re.search(r'^\x60\x60\x60(?:rust|c|cpp|zig|go|java|python)\s*$', documents[path], re.M):
+            errors.append(f'General engineering block lacks a concrete code example: {relative}')
+    compiler_router_text = documents.get(root / 'references/engineering/09-wide-pointerless-compiler.md', '')
+    broad_section = re.search(
+        r'^## Route broad redesigns\n([\s\S]*?)(?=^## |\Z)',
+        compiler_router_text, re.M,
+    )
+    if broad_section and re.search(
+        r'^1\. read \[Structural analysis\]', broad_section.group(1), re.M
+    ):
+        errors.append('Broad compiler route must not force Structural analysis before Pipeline elimination')
+    diagnosis = root / 'references/performance/00-diagnosis.md'
+    if diagnosis in documents:
+        signature = next(
+            (line for line in documents[diagnosis].splitlines()
+             if 'Several full passes use the same data' in line),
+            '',
+        )
+        if signature and 'DOD-024' not in signature:
+            errors.append('Repeated-pass code signature must route to DOD-024')
+
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')

@@ -16,7 +16,7 @@ Select the smallest route that answers the request. Do not read the whole skill 
 | Performance problem without a trustworthy profile | [module composition](references/modules.md) + [performance diagnosis](references/performance/00-diagnosis.md) | selected rule pack after diagnosis |
 | Trusted profiler hotspot or supplied measured cause | [module composition](references/modules.md) + [performance methodology](references/performance-methodology.md) | the selected rule pack; do not repeat diagnosis only for sequence compliance |
 | Redesign object/data architecture | [workflow](references/workflow.md) + [structural analysis](references/engineering/00-structural-analysis.md) | matching representation/ownership/work block |
-| Broad compiler/frontend redesign | [workflow](references/workflow.md) + [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) | compiler router selects structural analysis, pipeline elimination, then at most one specialization initially |
+| Broad compiler/frontend redesign | [workflow](references/workflow.md) + [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) | compiler router selects pipeline elimination; add structural-analysis techniques only if the workflow map is insufficient, then one specialization |
 | Cleanup/YAGNI review | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow only when code will change |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
 

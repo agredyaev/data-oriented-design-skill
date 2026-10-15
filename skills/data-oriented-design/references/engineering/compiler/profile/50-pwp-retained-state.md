@@ -71,7 +71,7 @@ A historical price is not derived from the current price. Keep it even if the va
 
 ```text
 Does the retained map/AST/buffer have a consumer after build/freeze/pass ends?
-  NO -> RELEASE it at its last consumer; do not copy it into runtime state.
+  NO -> REMOVE it after its last consumer; do not copy it into runtime state.
   YES -> does the consumer need the full structure or only a projection/index?
           full structure -> KEEP it.
           projection/index -> keep only the required result.

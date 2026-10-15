@@ -247,7 +247,7 @@ For example, a retained-memory target may pass at unchanged phase time. A phase-
 | A repeated loop skips inactive rows | Active partition or active IDs | DOD-020 |
 | Repeated `N × M` scan or key search | Grouped rows or an index with maintenance cost | DOD-003, DOD-021 |
 | Repeated queries recompute one result | Cache or incrementally maintain the result | DOD-003, DOD-010 |
-| Several full passes use the same data | Fuse or block the passes when semantics allow | DOD-003, DOD-010 |
+| Several full passes use the same data | Fuse, split, or block the passes when semantics allow | DOD-024, DOD-025 |
 | Pure SoA causes page or TLB pressure | Use bounded SoA chunks inside an AoSoA layout | DOD-006 |
 
 

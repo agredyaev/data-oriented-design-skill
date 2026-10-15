@@ -36,11 +36,11 @@ START
   |      '-- NO -> continue.
   |
   |-- Is one logical identity normalized/hashed/resolved more than once?
-  |      |-- YES -> PROPAGATE typed identity, unless matched measurement favors recomputation.
+  |      |-- YES -> KEEP the typed identity and REMOVE repeated resolution, unless matched measurement favors recomputation.
   |      '-- NO -> continue.
   |
   |-- Does frozen state retain growth/maps/mutation machinery with no consumer?
-  |      |-- YES -> REMOVE it or FREEZE/PACK.
+  |      |-- YES -> REMOVE unused machinery; TEST packing only when it has a named structural/cost goal.
   |      '-- NO -> continue.
   |
   |-- Does a target hot pass fetch fields it does not use?
