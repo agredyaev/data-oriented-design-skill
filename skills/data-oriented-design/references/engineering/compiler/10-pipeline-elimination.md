@@ -98,7 +98,7 @@ Keep a syntax tree, AST, or staging IR when at least one condition is true:
 - a source-preserving or tooling contract requires it;
 - a correctness boundary requires it;
 - direct emission would make the producer more complex than one bounded packing pass;
-- measurement shows that the staging form lowers total cost.
+- matched measurement shows that the staging form lowers the declared target cost.
 
 Otherwise remove it.
 
@@ -179,7 +179,7 @@ new invariants
 
 Unknown values remain `?`.
 
-Prefer the simplest candidate that preserves the contract and removes the most recurring work or retained state.
+Prefer the candidate that preserves the contract and produces the best declared structural/measurement result with the fewest new invariants. If evidence does not distinguish candidates, mark the choice `MEASURE`.
 
 ## Related rules
 
