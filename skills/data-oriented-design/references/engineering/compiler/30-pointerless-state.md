@@ -2,7 +2,7 @@
 
 Use this block when long-lived compiler state contains pointer graphs, nested containers, individually owned strings, repeated logical identity, wide hot records, or builder state that survives after construction.
 
-The rule is not "no pointers". The rule is: persistent semantic identity and topology should use the cheapest representation that matches ownership and access.
+The rule is not "no pointers". The rule is: persistent semantic identity and topology should use the simplest representation that satisfies ownership/access requirements and the declared cost budget. If cost is unknown, use `MEASURE`.
 
 ## Decision tree
 
@@ -22,11 +22,11 @@ START
   |      '-- NO
   |
   |-- Are many strings individually allocated?
-  |      |-- YES -> test byte pooling; intern only when canonical identity/dedup pays.
+  |      |-- YES -> test byte pooling; add interning only if canonical identity/dedup is required or measured to improve the target.
   |      '-- NO
   |
   |-- Is logical identity normalized/hashed/resolved more than once?
-  |      |-- YES -> resolve once and propagate typed identity, unless recomputation is cheaper.
+  |      |-- YES -> resolve once and propagate typed identity, unless matched measurement shows recomputation has lower total cost.
   |      '-- NO
   |
   |-- Does frozen state retain builder capacity/maps/mutation machinery?
@@ -103,7 +103,7 @@ Do not force CSR on mutation-heavy sparse structures without evidence.
 
 ## 4. Pool strings; intern only for a separate reason
 
-Byte pooling solves allocation and reference width:
+Byte pooling targets allocation count and reference width:
 
 ```text
 string_bytes[]
@@ -174,7 +174,7 @@ Size known at compile time?
        |
        '-- After build, is growth still required?
               |-- YES -> keep growable form.
-              '-- NO -> freeze/pack if the savings justify the pass.
+              '-- NO -> freeze/pack only if it removes unused state by contract or passes the declared cost acceptance rule.
 ```
 
 Do not turn `Vec<T>` itself into a code smell. The smell is retained builder machinery with no post-build responsibility.
