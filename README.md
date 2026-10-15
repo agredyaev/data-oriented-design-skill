@@ -44,7 +44,11 @@ A compiler-specific module also covers wide classification, compact token stream
 - Performance router: `skills/data-oriented-design/references/performance-methodology.md`
 - Engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`
 - Structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`
-- Wide/pointerless compiler module: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`
+- Compiler DOD router: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`
+- Compiler pipeline elimination: `skills/data-oriented-design/references/engineering/compiler/10-pipeline-elimination.md`
+- Wide frontend/tokenization: `skills/data-oriented-design/references/engineering/compiler/20-wide-frontend.md`
+- Pointerless compiler state: `skills/data-oriented-design/references/engineering/compiler/30-pointerless-state.md`
+- Compiler redesign validation: `skills/data-oriented-design/references/engineering/compiler/40-validation.md`
 - Focused engineering blocks: `skills/data-oriented-design/references/engineering/`
 - Performance rule packs: `skills/data-oriented-design/references/performance/`
 
