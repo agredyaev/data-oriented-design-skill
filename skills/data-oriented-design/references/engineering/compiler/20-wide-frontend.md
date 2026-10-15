@@ -9,31 +9,33 @@ Do not introduce SIMD or a custom token format before the frontend cost is measu
 ```text
 START
   |
-  |-- Is tokenization / lexical scanning a measured contributor to the target or over budget?
-  |      |-- NO -> do not optimize it.
+  |-- Is frontend/tokenization part of the declared target?
   |      |-- UNKNOWN -> MEASURE.
+  |      |-- NO -> STOP; do not optimize this block.
   |      '-- YES
   |
-  |-- Is input classified one byte/item at a time with branch-per-item work?
-  |      |-- YES -> test batch classification into masks/bitsets.
-  |      '-- NO -> keep current scan unless another measured cause exists.
-  |
-  |-- Does profiling show one-by-one mask extraction contributes to the target cost?
-  |      |-- UNKNOWN -> MEASURE.
-  |      |-- YES -> test batch/SWAR/vector compaction.
-  |      '-- NO
-  |
-  |-- Does the token stream retain redundant source data?
-  |      |-- YES -> reduce to the minimum parser contract.
-  |      '-- NO
-  |
-  |-- Are keywords/names decoded repeatedly?
-  |      |-- YES -> decode/resolve once and carry typed identity.
-  |      '-- NO
-  |
-  |-- Does parsing build a tree only to lower it immediately?
-         |-- YES -> direct emit or minimal staging form.
-         '-- NO -> keep the independently consumed representation.
+  |-- Which cause is demonstrated?
+         |
+         |-- branch-per-byte/item classification
+         |      -> TEST batch classification into masks/bitsets.
+         |
+         |-- one-by-one extraction from a hot mask
+         |      -> TEST batch/SWAR/vector compaction.
+         |
+         |-- redundant token source data
+         |      -> REDUCE to the minimum parser contract.
+         |
+         |-- repeated keyword/name decode
+         |      -> DECODE/RESOLVE once and carry typed identity.
+         |
+         |-- staging tree immediately lowered with no independent consumer
+         |      -> DIRECT EMIT or keep one minimal staging form.
+         |
+         |-- none of the above
+         |      -> KEEP current frontend; diagnose another cause.
+         |
+         '-- evidence missing for the suspected cause
+                -> MEASURE before changing representation.
 ```
 
 Any transformation that changes lexical or parsing semantics must pass the semantic-equivalence and fail-closed gates in `40-validation.md`.
