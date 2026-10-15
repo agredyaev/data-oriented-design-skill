@@ -248,27 +248,7 @@ tag[] + extent[]
 
 Treat `512 bytes`, `@Vector(512, u8)`, and `8 × u64` as a project-specific realization, not a universal DOD rule.
 
-For the Duck Mesh reference design, preserve the concrete mapping:
-
-```text
-@Vector(512, u8)
-        ↓
-512 character lanes
-        ↓
-@Vector(8, u64)
-        ↓
-8 × 64-bit classification bitstrings
-```
-
-The implementation backend may use:
-
-```text
-AVX-512
-NEON
-SVE
-BMI2/SWAR
-portable fallback
-```
+A concrete implementation may map a fixed byte block to one or more machine-word bitsets and provide SIMD/SWAR plus portable fallback implementations. Keep the parser-facing contract independent of the backend where practical.
 
 The important invariant is this:
 
@@ -612,16 +592,14 @@ direct parser for normal cases
 
 A legacy parser may temporarily remain as an independent test oracle. It should not remain an alternate production authority once equivalence and migration are complete.
 
-The Duck Mesh canonical production path from the source methodology is explicitly one production path:
+The production design should converge to one canonical path:
 
 ```text
-ONE production path
-
-SQL
+source
 → direct frontend
-→ MeshIR
-→ MeshSema
-→ CanonicalMesh
+→ semantic IR
+→ semantic processing
+→ canonical result
 ```
 
 ## 21. Delete legacy code by observable responsibility
@@ -747,22 +725,6 @@ Use representative workloads. Report improvements only against a baseline that e
 
 An optimization that reduces storage but leaves wall time unchanged is a memory/storage win, not a CPU win.
 
-Keep the source methodology's measured frontend example as a reference for what stage-level evidence looks like:
-
-```text
-old AST frontend:
-MeshIR ≈ 821 ms
-
-direct parser with intermediate positions:
-MeshIR ≈ 215–228 ms
-
-tag + extent after removing synthetic template reuse:
-MeshIR ≈ 226 ms
-
-821 / 226 ≈ 3.6×
-```
-
-The important comparison is the last one because it does not depend on synthetic shape caching. These numbers are project evidence, not universal expected gains.
 
 ## 27. Keep an optimization only after causal validation
 
@@ -941,80 +903,6 @@ A representative target for a SQL/compiler frontend is:
                 canonical result
 ```
 
-For Duck Mesh, the source methodology defines the more concrete target below. Keep this as a project-specific realization of the generic architecture above:
-
-```text
-                       SQL bytes
-                           │
-                           ▼
-              ┌───────────────────────┐
-              │ 512-byte classifier   │
-              │ 8 × u64 bitstrings    │
-              └──────────┬────────────┘
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ mask algebra          │
-              │ words / punctuation   │
-              │ comments / quotes     │
-              │ boundaries            │
-              └──────────┬────────────┘
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ batch compression     │
-              └──────────┬────────────┘
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ token stream          │
-              │ tags[]                │
-              │ extents[]             │
-              │ leading_bytes         │
-              └──────────┬────────────┘
-                         │
-                 token_ix + byte_cursor
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ pointerless parser    │
-              │ bounded scratch       │
-              │ token-index ranges    │
-              └──────────┬────────────┘
-                         │
-                    direct emit
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ MeshIR SoA            │
-              │ tags[]                │
-              │ data_a[]              │
-              │ data_b[]              │
-              │ payload[]             │
-              │ extra[]               │
-              │ string_bytes[]        │
-              │ model_ranges[]        │
-              │ model_roots[]         │
-              └──────────┬────────────┘
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ dependency CSR        │
-              └──────────┬────────────┘
-                         │
-                         ▼
-              ┌───────────────────────┐
-              │ fused MeshSema        │
-              │ dense scopes          │
-              │ type inference        │
-              │ function resolution   │
-              │ lineage               │
-              └──────────┬────────────┘
-                         │
-                         ▼
-                   CanonicalMesh
-```
-
 Central invariant:
 
 > Every arrow must justify the representation on its right. If the representation adds no required information, independent consumer, or measured benefit, remove it or fuse the stages.
@@ -1036,7 +924,7 @@ Do not load all those files automatically. Start with this module plus structura
 
 ## Coverage checklist for this module
 
-The module intentionally covers every topic in the Wide, Pointerless Compiler Design methodology:
+The module covers the reusable methodological principles of Wide, Pointerless Compiler Design:
 
 | Source topic | Covered here |
 | --- | --- |
@@ -1045,7 +933,7 @@ The module intentionally covers every topic in the Wide, Pointerless Compiler De
 | intermediate-representation decision tree | §3 |
 | wide bitset tokenization | §4 |
 | batch mask extraction/compaction | §5 |
-| 512-byte frontend contract | §6, generalized with project-specific width |
+| fixed-width frontend batch contract | §6 |
 | minimal token representation | §7 |
 | insignificant bytes folded into extents/progress | §8 |
 | keyword decode once | §9 |
@@ -1072,4 +960,4 @@ The module intentionally covers every topic in the Wide, Pointerless Compiler De
 | complete decision process | §30 |
 | target architecture | §31 |
 
-The core objective and preferred pipeline are stated before §1. No source topic is intentionally omitted.
+The core objective and preferred pipeline are stated before §1. Project-specific names, benchmark numbers, and implementation-specific layouts are intentionally excluded unless they express a reusable rule.
