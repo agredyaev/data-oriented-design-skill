@@ -4,7 +4,7 @@ Use this file only to choose the compiler-specific block. Do not read every comp
 
 The compiler methodology has one top-level rule:
 
-> Minimize persistent representations, repeated passes, repeated decoding, and unpredictable access between source input and the required semantic result.
+> Minimize persistent representations and repeated passes. Minimize repeated decoding and unpredictable access on the path to the required semantic result.
 
 ## Choose one primary block
 
@@ -65,7 +65,7 @@ micro-optimize instructions
 - **Pointerless state** decides how long-lived compiler data is represented.
 - **Validation** decides whether the redesign is correct and whether a claimed improvement is proven.
 
-Do not use a lower-level block to justify a higher-level stage. For example, do not optimize an AST layout before Pipeline elimination has established that the AST has a required consumer.
+Do not use a lower-level block to justify a higher-level stage. First establish that the stage must exist. Example: do not optimize AST layout until Pipeline elimination identifies a required AST consumer.
 
 ## General rules still apply
 
@@ -83,4 +83,4 @@ Use the existing general DOD packs instead of duplicating them:
 
 If the current question can be answered from the selected block, stop loading references.
 
-If two consecutive local compiler changes fail the declared target acceptance rule, return to Structural analysis and Pipeline elimination instead of loading more low-level rules.
+If two consecutive local compiler changes fail the declared target acceptance rule, stop local tuning. Return to Structural analysis and Pipeline elimination.
