@@ -14,13 +14,13 @@ The skill uses progressive disclosure. `SKILL.md` routes each task to the requir
 - validate the predicted physical metric;
 - validate phase time, total time, memory, and correctness.
 
-It covers AoS, SoA, AoSoA, typed IDs, flat relations, side storage, string and canonical-value interning, access-order changes, packing, indexing, serialization, allocation lifetime, and concurrency.
+It covers AoS, SoA, AoSoA, typed IDs, flat relations, side storage, string and canonical-value interning, access-order changes, packing, indexing, serialization, allocation lifetime, concurrency, and a compiler-specific wide/pointerless frontend module covering batch classification, compact token streams, pointerless parsing, direct IR emission, and canonical production paths.
 
 Each rule `DOD-001` through `DOD-033` has its own decision tree. The skill also contains one global diagnostic decision tree.
 
 The writing rules use Simplified Technical English style: active voice, short procedural sentences, stable terminology, and explicit conditions. The skill does not claim certified ASD-STE100 compliance.
 
-Skill router: `skills/data-oriented-design/SKILL.md`.\n\nDetailed material:\n\n- workflow: `skills/data-oriented-design/references/workflow.md`;\n- performance methodology and `DOD-001` through `DOD-033`: `skills/data-oriented-design/references/performance-methodology.md`;\n- engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`;\n- structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`;\n- focused engineering blocks: `skills/data-oriented-design/references/engineering/`.
+Skill router: `skills/data-oriented-design/SKILL.md`.\n\nDetailed material:\n\n- workflow: `skills/data-oriented-design/references/workflow.md`;\n- performance methodology and `DOD-001` through `DOD-033`: `skills/data-oriented-design/references/performance-methodology.md`;\n- engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`;\n- structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`;\n- focused engineering blocks: `skills/data-oriented-design/references/engineering/`;\n- wide/pointerless compiler module: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`.
 
 To install in Codex, copy `skills/data-oriented-design` into `~/.codex/skills/`.
 To install in Claude Code, copy the same directory into `~/.claude/skills/` or a project's `.claude/skills/`, then invoke `/data-oriented-design`.
