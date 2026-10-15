@@ -163,37 +163,9 @@ new representation/layer added
 
 Do not call a storage win a speed win.
 
-## 7. Complete redesign sequence
+## 7. Execution and reporting
 
-```text
-state contract
-  ↓
-draw complete typed pipeline
-  ↓
-list persistent representations
-  ↓
-remove/fuse representations that add no required information
-  ↓
-replace unjustified long-lived pointer/key topology
-  ↓
-pool/resolve identity when required or selected by measurement
-  ↓
-inspect hot lexical scan
-  ↓
-test wide classification only when profiling selects lexical scanning
-  ↓
-test batch event extraction only when profiling selects extraction
-  ↓
-remove staging tree when it has no independent consumer
-  ↓
-remove superseded production path
-  ↓
-semantic correctness gate
-  ↓
-representative measurement gate
-  ↓
-keep only added structure with a named responsibility and passed budget
-```
+Follow [Workflow](../../workflow.md) for the redesign sequence and proportional report. Use the compiler router to select a block for each diagnosed cause. This file adds compiler-specific correctness and measurement gates, not a second workflow.
 
 ## 8. Generic target architecture
 
@@ -220,3 +192,4 @@ Optional wide classification, mask algebra, batch compaction, SoA, CSR, internin
 Central invariant:
 
 > Every persistent representation and every full pass needs a named semantic consumer or a measured cost justification.
+

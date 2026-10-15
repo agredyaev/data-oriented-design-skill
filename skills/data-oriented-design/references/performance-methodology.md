@@ -20,8 +20,9 @@ After diagnosis, load only the rule pack that contains the selected rule IDs:
 
 ## Loading rule
 
-Do not load all rule packs by default. Use `00-diagnosis.md` to select a rule family, then open the relevant pack. Load another pack only when the finding crosses that boundary.
+Do not load all rule packs by default. Use [Performance diagnosis](performance/00-diagnosis.md) to select a rule family, then open the relevant pack. Load another pack only when the finding crosses that boundary.
 
-For a structural redesign, read `../engineering/00-structural-analysis.md` before selecting a layout rule. Structural elimination takes priority over tuning a mechanism that can be removed.
+For a broad structural redesign, use [Structural analysis](engineering/00-structural-analysis.md). For profiler-led work, use [Route selection](modules.md#choose-and-switch-routes) and inspect the selected hotspot first. Check whether a mechanism can be removed before tuning it; expand to a structural map when the cause requires one.
 
 The complete rule set remains DOD-001 through DOD-033. Each rule keeps one decision tree and one rule definition in the routed packs.
+

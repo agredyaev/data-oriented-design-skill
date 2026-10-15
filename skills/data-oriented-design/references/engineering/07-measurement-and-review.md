@@ -95,7 +95,7 @@ operation-specific duplicated guards protecting different invariants
 ---
 # 13. Cleanup Review Checklist
 
-Before accepting a cleanup change, answer:
+Use these questions to investigate the affected path. Report only decisions and unresolved issues under [Workflow reporting](../workflow.md#proportional-result-format); do not turn this checklist into a mandatory questionnaire. Skip questions unrelated to the change.
 
 ### Data
 
@@ -229,3 +229,4 @@ For code review, the policy can be reduced to:
 18. **Measure material optimization work.**
 19. **Preserve deterministic behavior and explicit resource bounds.**
 20. **Prefer measurable simplicity over abstraction.**
+

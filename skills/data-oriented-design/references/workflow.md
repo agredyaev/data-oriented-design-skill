@@ -1,6 +1,10 @@
 # Data-Oriented Design Workflow
 
-Use this workflow for implementation or formal review. It is intentionally short. Detailed rules live in the routed engineering and performance references.
+Use this file as the default full-route composition and the shared completion/reporting contract. Use [Module composition](modules.md) to select a single capability or assemble a different route. Focused explanations need only the relevant rule.
+
+Choose structural or profiler-driven execution through [Module composition](modules.md#choose-and-switch-routes). Steps below describe a full structural redesign, not a universal order. Reuse matching inputs/evidence and execute only missing prerequisites. Analysis-only work stops with its selected conclusion. Do not claim skipped verification passed.
+
+For a local fix with no representation, ownership, or boundary change, state affected behavior, make the fix, and verify it. No process map is required.
 
 ## 1. Fix the contract
 
@@ -25,7 +29,7 @@ Unknown requirements are `UNKNOWN`. Do not invent them.
 
 ## 2. Draw the current process and data
 
-For a non-trivial path, produce one typed ASCII process map:
+For a structural redesign, map only the affected input-to-output process. Use Mermaid when supported, or a compact typed table; use text diagrams when rendering is unavailable. Each operation must identify its input, output, state, and known call count. The following text illustrates the required information:
 
 ```text
 [1] operation
@@ -56,7 +60,7 @@ IPC/syscall
 state transition
 ```
 
-Also draw the retained data owned by the path:
+Also map the retained data owned by the path. A typed table or rendered diagram can carry the same information as this text example:
 
 ```text
 RootState
@@ -122,9 +126,11 @@ Do not require documentation for elements already obvious from the code and cont
 
 ## 4. Design the replacement from the contract
 
-Do not modify the old object model in place first.
+Create the candidate before changing the old object model. A candidate may keep the current process when code, contract, or measurement shows no justified simplification. Do not force a rewrite to satisfy the format.
 
-Create a candidate process that solves the same contract with fewer explicit operations and less retained state.
+For a performance task, establish the baseline and measured bottleneck before selecting a transformation. Use [Performance diagnosis](performance/00-diagnosis.md) when the cause is unknown. Missing evidence permits a concrete candidate marked `UNVERIFIED`, but never an invented performance finding.
+
+Create a candidate process that solves the same contract with fewer explicit operations or less retained state, without adding more expensive invariants.
 
 ```text
 CURRENT
@@ -147,7 +153,7 @@ State
   +-- indexes[]
 ```
 
-Use detailed DOD rules only after this candidate exists.
+Use detailed DOD rules to refine the candidate, in either execution route.
 
 The candidate is valid only if every new element also passes the element-necessity test.
 
@@ -217,7 +223,7 @@ If two consecutive local changes on the same representation do not materially mo
 
 ## Completion rule
 
-A change is complete when:
+Apply these gates to the selected scope. Analysis-only work completes with its conclusion, supporting evidence, and relevant unknowns; it does not require implementation or a benchmark. An implementation or accepted redesign is complete when:
 
 - the required contract still holds;
 - every added element has a concrete responsibility;
@@ -226,14 +232,22 @@ A change is complete when:
 - any performance claim has matched evidence;
 - remaining unknowns are stated explicitly.
 
-## Compact result format
+## Proportional result format
 
-For a review or implementation, report only:
+For a local fix, report the change, affected behavior, verification, and any unresolved issue. No structural report is required.
 
-1. **Contract**
-2. **Current typed process/data map**
-3. **Element decisions** — only KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH/MEASURE decisions that matter
-4. **Candidate typed process/data map**
-5. **Structural delta**
-6. **Verification**
-7. **Remaining unknowns/findings**
+For a full architecture/performance redesign, use one compact report:
+
+1. **Contract** — required behavior and relevant bounds.
+2. **Current → candidate** — typed process/data maps; combine them when this remains readable.
+3. **Decisions and delta** — only changed or disputed elements, relevant counts, and trade-offs.
+4. **Verification and result** — behavior evidence; matched measurements for the claimed metric.
+5. **Unknowns** — missing evidence, rejected candidates, or remaining defects that affect the decision.
+
+Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `OUTSIDE DOD` for conclusions. Attach rule IDs only when they explain a decision. An unmeasured speed/memory proposal is `UNVERIFIED`; removing a named unnecessary layer may be accepted as structural simplification from code and behavior evidence.
+
+Do not enumerate every considered rule, report `N/A` rows, repeat the same map in multiple sections, or create a separate artifact unless the task requires one. Include build/query/update/space costs only where the candidate changes them. Unknown values stay `?` or `UNKNOWN`.
+
+For a scoped module, report its decision/result, evidence, and blocking unknowns; reuse existing maps by reference. Do not fill sections belonging to modules that were not selected. State when correctness or performance acceptance remains pending.
+
+For a formal rule-coverage audit explicitly requested by the user, include the requested per-rule dispositions.

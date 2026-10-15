@@ -156,7 +156,7 @@ Can a reader reproduce the finding?
 
 ### DOD-013 — Make each review finding actionable
 - **Symptom:** A review says “use SoA” or “make this faster” without a loop, scale, or proof.
-- **Action:** Report rule ID, code location, operation, workload, baseline, root-cause evidence, hypothesis, transformation, prediction, invariants, result, and verdict. Use `FINDING`, `UNVERIFIED`, `NO FINDING`, or `N/A` for each considered rule.
+- **Action:** For an actionable finding, identify the code location, workload/baseline, cause, before → after transformation, preserved behavior, and acceptance evidence. Attach the applicable rule ID. Use the proportional report in [Workflow](../workflow.md); do not produce a disposition for every considered rule unless the user requests a coverage audit.
 - **Check:** A reader can reproduce the calculation or measurement and decide whether to implement the change. Never invent profile percentages or latency.
 - **Example:** `Illustrative UNVERIFIED DOD-003/DOD-007: load loops over M=20,000 records for each of D=200 owners (4,000,000 comparisons; O(DM)). Two-pass grouping by checked dense owner ID costs O(D+M) time and extra space. Preserve per-owner order and duplicate errors. Matched load time and peak bytes: not measured.`
 
@@ -206,4 +206,4 @@ Is the dominant bottleneck outside data representation, access order, lifetime, 
 
 ## Quality gate for this skill's output
 
-For each inspected operation, report applicable rule IDs and `FINDING`, `UNVERIFIED`, `NO FINDING`, `N/A`, or `OUTSIDE DOD`. Even `UNVERIFIED` gives a concrete `before → after` layout and names the missing measurement. Show build, query, update, and extra-space costs; never claim speed from Big O or row width alone. If a candidate fails, leave the original budget breach open.
+Use [Workflow reporting](../workflow.md#proportional-result-format) as the only reporting contract. A concrete performance proposal without measurements is `UNVERIFIED`; give its before → after design and the missing acceptance evidence. Never infer speed from Big O or row width alone. Include construction, maintenance, and space costs when they change the decision. If a candidate fails, leave the original budget breach open.

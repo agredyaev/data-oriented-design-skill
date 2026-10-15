@@ -25,6 +25,8 @@ Optimize in this order:
 
 ## Run one performance experiment
 
+For repeated profiler-led optimization, use [Profiler route](../modules.md#choose-and-switch-routes). Rank costs against the declared target, change one cause, then reprofile and rerank. The following steps describe one experiment, not a mandatory whole-system redesign.
+
 1. Freeze the workload and benchmark conditions.
 2. Test scaling with `N`, `2N`, and `4N`.
 3. Find the phase and operation that dominate wall time.
@@ -244,4 +246,5 @@ START
 | Repeated queries recompute one result | Cache or incrementally maintain the result | DOD-003, DOD-010 |
 | Several full passes use the same data | Fuse or block the passes when semantics allow | DOD-003, DOD-010 |
 | Pure SoA causes page or TLB pressure | Use bounded SoA chunks inside an AoSoA layout | DOD-006 |
+
 

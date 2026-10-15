@@ -36,7 +36,7 @@ For a full compiler/frontend redesign:
 2. read [Pipeline elimination](compiler/10-pipeline-elimination.md);
 3. load one additional compiler block only for the first accepted structural candidate.
 
-Do not start with SIMD, SoA, CSR, interning, or packing before the current and candidate pipelines exist.
+For a full redesign, establish current/candidate pipelines before selecting SIMD, SoA, CSR, interning, or packing. For a profiler-led task, start with the diagnosed hotspot and its required inputs under [Route selection](../modules.md#choose-and-switch-routes); expand structural scope only when the cause requires it.
 
 ## Shared decision order
 
@@ -75,10 +75,10 @@ Use the existing general DOD packs instead of duplicating them:
 
 | Need | Route |
 | --- | --- |
-| exact typed-ID / flat-relation rules | `../../performance/20-identity-and-relations.md` |
-| exact SoA / side-storage / packing rules | `../../performance/21-layout-and-encoding.md` |
-| repeated-work / fusion / blocking rules | `../../performance/30-work-and-access.md` |
-| benchmark methodology | `../../performance/00-diagnosis.md`, then `../../performance/01-measurement.md` |
+| exact typed-ID / flat-relation rules | `../performance/20-identity-and-relations.md` |
+| exact SoA / side-storage / packing rules | `../performance/21-layout-and-encoding.md` |
+| repeated-work / fusion / blocking rules | `../performance/30-work-and-access.md` |
+| benchmark methodology | `../performance/00-diagnosis.md`, then `../performance/01-measurement.md` |
 | correctness boundaries | `06-correctness-boundaries.md` |
 
 ## Stop rule
@@ -86,3 +86,4 @@ Use the existing general DOD packs instead of duplicating them:
 If the current question can be answered from the selected block, stop loading references.
 
 If two consecutive local compiler changes fail the declared target acceptance rule, stop local tuning. Return to Structural analysis and Pipeline elimination.
+

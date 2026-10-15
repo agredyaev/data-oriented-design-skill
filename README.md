@@ -2,11 +2,11 @@
 
 A language-independent skill for diagnosing data-oriented performance problems and designing simpler, measurable architectures.
 
-The skill uses progressive disclosure. `SKILL.md` routes each task to the smallest relevant workflow or rule block instead of loading the full methodology.
+The skill uses progressive disclosure. The skill router routes each task to the smallest relevant workflow or rule block instead of loading the full methodology. The entry file is `skills/data-oriented-design/SKILL.md`.
 
 ## Core workflow
 
-For non-trivial architecture or performance work:
+The full structural route is:
 
 1. define the contract;
 2. draw the current typed process and retained data;
@@ -15,6 +15,10 @@ For non-trivial architecture or performance work:
 5. design a simpler candidate from the contract;
 6. select the relevant DOD rules;
 7. validate correctness and the claimed physical/performance effect.
+
+For profiler-led optimization, rank measured costs against the target, select an actionable cause, test one change, then reprofile and rerank. Switch to structural analysis for shared causes or ineffective local tuning. Individual modules can also run alone when their inputs are available.
+
+The workflow owns the default full-route composition and proportional reporting format. The module composition map supports independent capabilities and custom routes with explicit inputs, outputs, and information dependencies. Structural analysis supplies mapping and candidate-design techniques. A local fix requires only affected-behavior verification; architecture work uses typed maps and relevant deltas. Rule-by-rule reports are reserved for explicitly requested coverage audits.
 
 The performance methodology covers workload definition, scaling checks, hotspot diagnosis, access patterns, falsifiable hypotheses, matched benchmarks, and causal acceptance.
 
@@ -40,6 +44,7 @@ A compiler-specific module also covers wide classification, compact token stream
 ## Files
 
 - Skill router: `skills/data-oriented-design/SKILL.md`
+- Module composition: `skills/data-oriented-design/references/modules.md`
 - Workflow: `skills/data-oriented-design/references/workflow.md`
 - Performance router: `skills/data-oriented-design/references/performance-methodology.md`
 - Engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`
@@ -65,3 +70,4 @@ For Codex, copy `skills/data-oriented-design` into `~/.codex/skills/`.
 For Claude Code, copy the same directory into `~/.claude/skills/` or a project's `.claude/skills/`, then invoke `/data-oriented-design`.
 
 For claude.ai, place `data-oriented-design/` at the top level of a ZIP and upload it in Customize > Skills.
+

@@ -59,11 +59,11 @@ Do not store and derive the same semantic value as two mutable authorities.
 
 ## Load rules by problem
 
-Read [Structural analysis](engineering/00-structural-analysis.md) first for any performance, data-model, ownership, or architecture task. It defines the mandatory ASCII map, structural alternatives, allocation-shape analysis, and micro-tuning escalation rule.
+For non-trivial architecture/performance work, follow [Workflow](workflow.md) and use [Structural analysis](engineering/00-structural-analysis.md) for typed maps, structural alternatives, allocation-shape analysis, and escalation after ineffective tuning. For a focused question, load only the matching block below.
 
 | Problem class | Read |
 | --- | --- |
-| Any performance/data-model/ownership/architecture task | [Structural analysis](engineering/00-structural-analysis.md) |
+| Broad structural redesign or a shared cause across hotspots | [Structural analysis](engineering/00-structural-analysis.md) |
 | Object graphs, dense arrays, typed IDs, contiguous storage, flat adjacency, builder→runtime shape | [Data shape](engineering/01-data-shape.md) |
 | Canonical state, derive-vs-store, repeated normalization/parsing, duplicated representations | [Canonical and derived data](engineering/02-canonical-and-derived.md) |
 | Repeated scans, clones, allocations, intermediate caching, operation-local reuse | [Hot-path work](engineering/03-hot-path-work.md) |
@@ -74,4 +74,5 @@ Read [Structural analysis](engineering/00-structural-analysis.md) first for any 
 | Concrete Rust transformations | [Examples](engineering/08-examples.md) |
 | Compiler/tokenizer/parser/IR pipeline | [Compiler DOD router](engineering/09-wide-pointerless-compiler.md) |
 
-Read every block that applies. Mixed problems normally require more than one block. Do not use the examples as authority over a repository-specific contract.
+Start with the primary block. Load another only when a finding crosses its boundary. Do not use the examples as authority over a repository-specific contract.
+
