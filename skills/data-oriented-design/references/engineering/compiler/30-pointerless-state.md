@@ -1,8 +1,8 @@
 # Pointerless Compiler State
 
-Use this block when long-lived compiler state contains pointer graphs, nested containers, individually owned strings, repeated logical identity, wide hot records, or builder state that survives after construction.
+Use this block for long-lived compiler state. Typical signals are pointer graphs, nested containers, per-string ownership, repeated identity resolution, wide hot records, or retained builder machinery.
 
-The rule is not "no pointers". The rule is: persistent semantic identity and topology should use the simplest representation that satisfies ownership/access requirements and the declared cost budget. If cost is unknown, use `MEASURE`.
+The rule is not "no pointers". Use the simplest representation that satisfies ownership and access requirements. Apply the declared cost budget. If cost is unknown, use `MEASURE`.
 
 ## Decision tree
 
@@ -147,7 +147,7 @@ typed identity
 
 Do not repeat normalize/hash/lookup solely because later stages use different wrappers.
 
-Exception: intentional recomputation is valid when the retained representation would cost more memory, lifetime complexity, or synchronization than resolving again.
+Intentional recomputation is valid only when the contract permits it and matched evidence favors recomputation over retention. Include memory, lifetime, and synchronization cost in that comparison.
 
 Make that trade-off explicit.
 
