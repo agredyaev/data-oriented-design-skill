@@ -65,7 +65,24 @@ Does each parent own a separate child allocation?
 
 ### Example: flat ranges
 
-`[[A,B], [], [C]]` can become `children=[A,B,C]`, `offsets=[0,2,2,3]`. Parent order is preserved. Do not claim O(1) append to parent 0 after freezing.
+Before:
+
+```rust
+struct Parent {
+    children: Vec<ChildId>,
+}
+```
+
+Candidate after freeze:
+
+```rust
+struct Relations {
+    child_offsets: Vec<u32>,
+    child_ids: Vec<ChildId>,
+}
+```
+
+`[[A,B], [], [C]]` becomes `child_ids=[A,B,C]`, `child_offsets=[0,2,2,3]`. Parent order is preserved. Do not claim O(1) append to parent 0 after freezing.
 
 ## Decision tree: AoS, SoA, or hot/cold split
 
@@ -84,7 +101,26 @@ Does the candidate force full-record reconstruction in the hot loop?
 
 ### Example: status scan
 
-If a scheduler repeatedly scans only `status` across one million work items, test `statuses[]` separate from cold payload. If every hot operation immediately needs the whole work item, keep AoS.
+Before:
+
+```rust
+struct WorkItem {
+    status: Status,
+    payload: Payload,
+    diagnostics: Diagnostics,
+}
+```
+
+Candidate when the repeated pass reads only status:
+
+```rust
+struct WorkItems {
+    status: Vec<Status>,
+    cold: Vec<ColdWorkItem>,
+}
+```
+
+If every hot operation immediately needs the whole work item, keep AoS.
 
 ## Decision tree: builder versus frozen state
 
@@ -103,7 +139,24 @@ Is an exact-size packing/freeze pass proposed only for compactness?
 
 ### Example: build lookup
 
-A `HashMap<String, ModelId>` used only while resolving edges should disappear after freeze. Keep it if the runtime API still accepts names and must resolve them.
+Before:
+
+```rust
+struct Builder {
+    rows: Vec<ModelRow>,
+    by_name: HashMap<String, ModelId>,
+}
+```
+
+Candidate when runtime never resolves names:
+
+```rust
+struct FrozenModels {
+    rows: Vec<ModelRow>,
+}
+```
+
+Keep `by_name` if the runtime API still accepts names and must resolve them.
 
 ## Decision tree: explicit passes
 
@@ -119,7 +172,22 @@ Does an object method hide callbacks/shared mutation/nested dispatch?
 
 ### Example: make work visible
 
-Prefer explicit operations such as `admit -> resolve -> build_actions -> compute_readiness` when they expose real dependencies. Do not split one cohesive operation merely to create more stages.
+Before:
+
+```rust
+engine.process(input)?; // internally parses, resolves, mutates, dispatches
+```
+
+Candidate when these are real dependencies:
+
+```rust
+let admitted = admit(input)?;
+let resolved = resolve(&admitted, &catalog)?;
+let actions = build_actions(&resolved)?;
+compute_readiness(&actions, &mut readiness)?;
+```
+
+Do not split one cohesive operation merely to create more stages.
 
 ## Guardrails
 

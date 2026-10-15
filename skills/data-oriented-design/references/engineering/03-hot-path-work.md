@@ -24,7 +24,21 @@ Does the repeated path clone/copy/allocate data?
 
 ### Example: clone to slice
 
-Replace `process(existing_values.clone())` with `process(&existing_values)` when the callee does not need ownership after the call.
+Before:
+
+```rust
+for batch in batches {
+    process(batch.values.clone())?;
+}
+```
+
+Candidate when the callee does not retain ownership:
+
+```rust
+for batch in batches {
+    process(&batch.values)?;
+}
+```
 
 ## Decision tree: repeated scans
 
@@ -45,7 +59,27 @@ Does the same collection get scanned repeatedly for the same grouping/key?
 
 ### Example: owner ranges
 
-If models are already grouped by owner, use `model_range(owner)` instead of scanning all models for every owner. If they are not grouped and the query happens once, a new index may cost more than the scan.
+Before:
+
+```rust
+for owner in owners {
+    for model in &models {
+        if model.owner == owner.id { process(model); }
+    }
+}
+```
+
+Candidate when canonical storage already groups models:
+
+```rust
+for owner in owners {
+    for model in &models[model_range(owner.id)] {
+        process(model);
+    }
+}
+```
+
+If the query happens once and no grouping exists, a new index may cost more than the scan.
 
 ## Decision tree: local scratch versus retained cache
 
@@ -67,7 +101,20 @@ Is the intermediate used only inside one request/transaction/pass?
 
 ### Example: expression rendering
 
-Do not introduce a global `HashMap<ExprId, (String, Vec<Param>)>` merely because recursive rendering allocates. First test borrowing, bounded buffers, or a local size+emit strategy. Keep a cache only for demonstrated reuse.
+Bad first response:
+
+```rust
+static RENDERED: Mutex<HashMap<ExprId, (String, Vec<Param>)>> = ...;
+```
+
+Prefer operation-local scratch first:
+
+```rust
+let mut sql = String::with_capacity(estimated_len);
+render(expr, &mut sql, &mut params)?;
+```
+
+Keep retained cache state only for demonstrated cross-operation reuse.
 
 ## Decision tree: repeated transaction-local fragments
 
@@ -83,7 +130,24 @@ Is an identical bounded fragment rebuilt several times in one operation?
 
 ### Example: quoted identifiers
 
-Prepare a stable quoted identifier once per transaction when all uses share the same admitted identifier/version. Do not promote it to process-global state.
+Before:
+
+```rust
+emit(quote_identifier(name)?);
+log(quote_identifier(name)?);
+bind(quote_identifier(name)?);
+```
+
+Candidate inside one transaction:
+
+```rust
+let quoted = quote_identifier(name)?;
+emit(&quoted);
+log(&quoted);
+bind(&quoted);
+```
+
+Do not promote it to process-global state.
 
 ## Guardrails
 

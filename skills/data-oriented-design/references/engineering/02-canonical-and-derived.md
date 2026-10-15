@@ -20,7 +20,26 @@ Do two retained structures encode the same semantic facts?
 
 ### Example: graph copies
 
-`ManifestGraph + RuntimeGraph + SchedulerGraph` is suspicious when all retain the same edges. Keep one canonical edge store and narrow indexes/views unless each graph has an independent semantic responsibility.
+Before:
+
+```rust
+struct Runtime {
+    manifest_edges: Vec<Edge>,
+    runtime_edges: Vec<Edge>,
+    scheduler_edges: Vec<Edge>,
+}
+```
+
+Candidate when all three encode the same edges:
+
+```rust
+struct Runtime {
+    edges: Vec<Edge>,
+    scheduler_ranges: Vec<Range<u32>>,
+}
+```
+
+Keep separate graphs only when they carry independent semantics or authority.
 
 ## Decision tree: store or derive
 
@@ -41,7 +60,23 @@ Does removal also eliminate invalidation/synchronization/update work?
 
 ### Example: token end
 
-`end = start + fixed_width(kind)` can be derived when the source contract makes width fixed. A variable-width token cannot be reconstructed from `start + kind` alone; keep enough source/context or retain the endpoint.
+Before:
+
+```rust
+struct Token { kind: Kind, start: u32, end: u32 }
+```
+
+Candidate for fixed-width kinds:
+
+```rust
+struct Token { kind: Kind, start: u32 }
+
+fn end(t: Token) -> u32 {
+    t.start + fixed_width(t.kind)
+}
+```
+
+A variable-width token cannot be reconstructed from `start + kind` alone; keep enough source/context or retain the endpoint.
 
 ## Decision tree: parse/admit once
 
@@ -82,7 +117,21 @@ Does typed internal data serialize and immediately deserialize before use?
 
 ### Example: JSON validation
 
-Do not delete duplicate-key detection performed on original JSON bytes. But once that boundary produced trusted typed data, do not convert it back to JSON and parse it again only to call another internal component.
+Keep the byte-sensitive admission boundary:
+
+```rust
+let admitted = parse_and_reject_duplicate_keys(raw_json)?;
+```
+
+Remove an internal round-trip like:
+
+```rust
+let bytes = serde_json::to_vec(&admitted)?;
+let reparsed: Admitted = serde_json::from_slice(&bytes)?;
+execute(reparsed)?;
+```
+
+Prefer `execute(admitted)?` once byte-level validation has established the required semantics.
 
 ## Guardrails
 

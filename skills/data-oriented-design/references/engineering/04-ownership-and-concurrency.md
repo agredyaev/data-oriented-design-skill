@@ -20,7 +20,25 @@ Is the value retained beyond one local operation?
 
 ### Example: immutable manifest
 
-If an engine owns a manifest for the whole process and workers only read it, prefer direct ownership plus borrows. Use `Arc<Manifest>` only when thread/task ownership genuinely requires an independently cloned owner handle.
+Before when no independent owner is required:
+
+```rust
+struct Engine {
+    manifest: Arc<Manifest>,
+}
+```
+
+Candidate:
+
+```rust
+struct Engine {
+    manifest: Manifest,
+}
+
+fn execute(engine: &Engine, request: &Request) -> Result<Response> { ... }
+```
+
+Keep `Arc<Manifest>` when spawned tasks genuinely need independently cloned ownership.
 
 ## Decision tree: `Mutex` / shared mutation
 
@@ -41,7 +59,28 @@ Is the protected state mutated concurrently by multiple execution contexts?
 
 ### Example: `Arc<Mutex<Model>>`
 
-A graph of `Arc<Mutex<Model>>` is not justified because several functions want `&mut Model`. If one scheduler owns all model state, test indexed/root-owned mutation. Keep a lock when independent threads truly mutate the same contractual resource.
+Before:
+
+```rust
+struct Runtime {
+    models: HashMap<ModelId, Arc<Mutex<Model>>>,
+}
+```
+
+Candidate when one scheduler owns mutation:
+
+```rust
+struct Runtime {
+    models: Vec<Model>,
+}
+
+fn update(rt: &mut Runtime, id: ModelId) {
+    let model = &mut rt.models[id.0 as usize];
+    // mutate under the scheduler's exclusive ownership
+}
+```
+
+Keep a lock when independent threads truly mutate the same contractual resource.
 
 ## Decision tree: pointer graph versus typed identity
 
@@ -61,7 +100,23 @@ Does a long-lived relationship encode domain topology through object pointers?
 
 ### Example: frozen graph
 
-A snapshot-scoped immutable graph can often replace `Vec<Arc<Node>>` edges with `NodeId`. A plugin retaining a node after snapshot destruction cannot use a naked snapshot index without another lifetime protocol.
+Before:
+
+```rust
+struct Node {
+    edges: Vec<Arc<Node>>,
+}
+```
+
+Candidate for one snapshot-owned graph:
+
+```rust
+struct NodeId(u32);
+struct Node { edges: Range<u32> }
+struct Graph { nodes: Vec<Node>, edge_ids: Vec<NodeId> }
+```
+
+A plugin retaining a node after snapshot destruction cannot use a naked snapshot index without another lifetime protocol.
 
 ## Decision tree: foreign/native handle
 
@@ -73,7 +128,13 @@ Does a foreign library define the handle's sharing/thread-safety contract?
 
 ### Example: cancellation
 
-`Arc<NativeInterruptHandle>` can be correct when a native library requires a cloneable cross-thread cancellation handle. Do not rewrite it merely to satisfy a pointer-free aesthetic.
+```rust
+struct NativeCancellation {
+    interrupt: Arc<NativeInterruptHandle>,
+}
+```
+
+Keep this when the native API requires a cloneable cross-thread handle. Do not rewrite it merely to satisfy a pointer-free aesthetic.
 
 ## Guardrails
 

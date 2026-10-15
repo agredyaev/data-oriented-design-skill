@@ -45,7 +45,24 @@ Do the operations share the same semantic rule/invariants?
 
 ### Example: mutation modes
 
-If a common `execute(mode, history, bootstrap, reconcile, ...)` needs flags to recreate distinct SCD2/full/incremental semantics, keep explicit operations and share only truly identical low-level mechanics.
+Bad unification:
+
+```rust
+fn execute(
+    mode: Mode,
+    use_history: bool,
+    bootstrap: bool,
+    reconcile: bool,
+ ) -> Result<()> { ... }
+```
+
+Prefer explicit operations and a small shared primitive:
+
+```rust
+fn apply_scd2(...) -> Result<()> { ... }
+fn apply_full_replace(...) -> Result<()> { ... }
+fn quote_identifier(...) -> Result<String> { ... }
+```
 
 ## Decision tree: new cache/service/registry/framework
 
@@ -66,7 +83,22 @@ Is there an existing requirement that cannot be met by current ownership/data fl
 
 ### Example: cache versus ownership
 
-Do not add a global cache because repeated code cannot reach canonical state conveniently. First repair ownership or add the smallest explicit index. Add retained cache state only for demonstrated repeated reuse.
+Bad first response:
+
+```rust
+static LOOKUP_CACHE: Mutex<HashMap<Key, Value>> = ...;
+```
+
+Candidate when the real problem is ownership:
+
+```rust
+struct Runtime {
+    values: Vec<Value>,
+    by_key: HashMap<Key, ValueId>,
+}
+```
+
+Add retained cache state only for demonstrated repeated computation, not merely because canonical state is inconvenient to reach.
 
 ## Decision tree: apparent duplication
 
@@ -83,7 +115,14 @@ wire semantics, or an independent test oracle?
 
 ### Example: correctness boundary
 
-A claim check before work and a fence check at finalization can look repetitive but protect different authority moments. Do not merge them into one generic validation call if that weakens the protocol.
+```rust
+claim.check_live()?;
+apply_changes()?;
+fence.check_current()?;
+finalize()?;
+```
+
+Do not replace both checks with one early `validate_transaction()?` if authority may change between mutation and finalization.
 
 ## Decision tree: duplicate DTO/layer
 
@@ -97,7 +136,21 @@ Does A -> B -> C inside one process cross a real boundary or add required inform
 
 ### Example: transport-like DTO
 
-`DomainType -> InternalDto -> TransportLikeDto -> DomainType2` has no value merely because the names describe architectural layers. Keep a conversion only when a real boundary or invariant requires it.
+Before:
+
+```rust
+let dto1 = InternalDto::from(domain);
+let dto2 = TransportLikeDto::from(dto1);
+let value = DomainType2::try_from(dto2)?;
+```
+
+Candidate inside one process with no real boundary:
+
+```rust
+let value = project_required_fields(domain)?;
+```
+
+Keep a conversion only when a real boundary or invariant requires it.
 
 ## Guardrails
 

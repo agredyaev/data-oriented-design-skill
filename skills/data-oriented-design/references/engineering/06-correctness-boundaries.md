@@ -1,61 +1,101 @@
 # Correctness Boundaries
 
-# 8. Correctness Rules That Override Cleanup
+Use this block before removing checks, migrations, wire validation, recovery logic, or duplicated implementations. Similar code is removable only when it protects the same invariant at the same authority/time boundary.
 
-DOD/YAGNI cleanup must never remove correctness boundaries.
+## Decision tree: repeated authority checks
 
-## SAFE-01 — Preserve live authority checks
+```text
+Do two checks observe the same authority at the same logical moment?
+  NO -> KEEP both; they protect different authority windows.
+  UNKNOWN -> inspect when authority can change.
+  YES
+    |
+    '-- Can one check dominate every mutation/finalization path?
+          NO -> KEEP the required checks.
+          YES -> TEST MERGE only if races/isolation semantics remain identical.
+```
 
-Snapshot validation does not replace transaction-local checks.
+### Example: claim and fence
 
-Claims, leases, epochs, fences, readiness, and finalization may require separate checks because they have different authority and isolation responsibilities.
+```rust
+claim.check_live()?;
+apply_changes()?;
+fence.check_current()?;
+finalize()?;
+```
 
-Do not combine them into a generic transaction wrapper merely because they look repetitive.
+The second check is not duplicate work when another actor can invalidate authority after `apply_changes()`. One early `validate_transaction()?` would weaken the protocol.
 
----
+## Decision tree: similar validations
 
-## SAFE-02 — Preserve distinct invariants
+```text
+Do the checks reject different invalid states?
+  YES -> KEEP them as distinct invariants.
+  UNKNOWN -> enumerate each failure condition before deduplicating.
+  NO
+    |
+    '-- Would one shared primitive preserve the same diagnostics and failure point?
+          YES -> MERGE only the identical mechanic.
+          NO -> KEEP separate checks.
+```
 
-SCD2 checks such as:
+### Example: SCD2 invariants
 
-- source uniqueness;
-- current-row uniqueness;
-- monotonic change time;
-- history validity;
-- affected-row count;
+```rust
+check_source_uniqueness(rows)?;
+check_current_row_uniqueness(history)?;
+check_monotonic_change_time(rows)?;
+check_history_validity(history)?;
+```
 
-protect different invariants.
+Do not replace these with a vague `validate_scd2()` implementation that obscures which invariant failed. A small shared comparison helper is fine when the checks remain independently visible.
 
-Do not deduplicate them into one vague "validate SCD2" check if doing so weakens or obscures the individual guarantees.
+## Decision tree: old or duplicate implementation
 
----
+```text
+Is the code used by a supported upgrade path, recovery path, or independent oracle?
+  YES -> KEEP it; name that responsibility.
+  UNKNOWN -> inspect supported versions/tests before deletion.
+  NO -> REMOVE it if no current consumer remains.
+Does an oracle share implementation with the code under test after cleanup?
+  YES -> REJECT that consolidation; independence was the responsibility.
+```
 
-## SAFE-03 — Preserve upgrade migrations
+### Example: migration and oracle
 
-Old migrations required to upgrade a supported installation are not dead code.
+```rust
+fn migrate_v3_to_v4(db: &mut Db) -> Result<()> { ... }
 
-Do not delete them because the current schema no longer needs them during a fresh install.
+#[test]
+fn optimized_matches_reference() {
+    assert_eq!(optimized(input), reference(input));
+}
+```
 
----
+A migration remains required while v3 is a supported upgrade source. `reference()` may intentionally duplicate logic so it can detect defects in `optimized()`.
 
-## SAFE-04 — Preserve independent test oracles
+## Decision tree: wire bytes versus typed state
 
-An intentionally independent implementation used as a test oracle may look duplicated but serves a distinct validation responsibility.
+```text
+Does a validation rule depend on the original bytes/framing/order?
+  YES -> KEEP byte-level validation at admission.
+  NO -> typed state may replace repeated internal parsing.
+Has the byte-level rule already been established before typed admission?
+  YES -> REMOVE later serialize/reparse copies unless another wire boundary exists.
+```
 
-Do not consolidate the oracle with the implementation under test.
+### Example: duplicate JSON keys
 
----
+```rust
+let admitted = parse_json_rejecting_duplicate_keys(raw)?;
+execute(admitted)?;
+```
 
-## SAFE-05 — Preserve wire-level validation
+Do not replace the first line with ordinary typed deserialization if duplicate keys must be rejected. After admission, avoid serializing `admitted` back to JSON solely to call an internal component.
 
-Do not remove checks that depend on original input bytes merely because an internal typed representation exists.
+## Guardrails
 
-Examples include:
-
-- duplicate JSON key detection;
-- exact framing;
-- truncation detection;
-- version rejection;
-- canonical-byte constraints.
-
----
+- Upgrade migrations are not dead code while their source version remains supported.
+- Independent test oracles must remain independent enough to expose the same implementation defect.
+- Wire/framing/truncation/version checks that depend on original bytes cannot be reconstructed from a lossy typed representation.
+- Correctness boundaries override YAGNI cleanup and local performance wins.
