@@ -11,6 +11,11 @@ PERFORMANCE_DIR = ROOT / "references/performance"
 ENGINEERING_ROUTER = ROOT / "references/dod-yagni-engineering-rules.md"
 STRUCTURAL = ROOT / "references/engineering/00-structural-analysis.md"
 COMPILER_MODULE = ROOT / "references/engineering/09-wide-pointerless-compiler.md"
+COMPILER_DIR = ROOT / "references/engineering/compiler"
+COMPILER_PIPELINE = COMPILER_DIR / "10-pipeline-elimination.md"
+COMPILER_FRONTEND = COMPILER_DIR / "20-wide-frontend.md"
+COMPILER_STATE = COMPILER_DIR / "30-pointerless-state.md"
+COMPILER_VALIDATION = COMPILER_DIR / "40-validation.md"
 README = Path("README.md")
 
 errors = []
@@ -22,6 +27,10 @@ required_files = [
     ENGINEERING_ROUTER,
     STRUCTURAL,
     COMPILER_MODULE,
+    COMPILER_PIPELINE,
+    COMPILER_FRONTEND,
+    COMPILER_STATE,
+    COMPILER_VALIDATION,
     PERFORMANCE_DIR / "00-diagnosis.md",
     PERFORMANCE_DIR / "01-measurement.md",
     PERFORMANCE_DIR / "10-foundation.md",
@@ -46,6 +55,10 @@ workflow = WORKFLOW.read_text(encoding="utf-8")
 performance_router = PERFORMANCE_ROUTER.read_text(encoding="utf-8")
 structural = STRUCTURAL.read_text(encoding="utf-8")
 compiler_module = COMPILER_MODULE.read_text(encoding="utf-8")
+compiler_pipeline = COMPILER_PIPELINE.read_text(encoding="utf-8")
+compiler_frontend = COMPILER_FRONTEND.read_text(encoding="utf-8")
+compiler_state = COMPILER_STATE.read_text(encoding="utf-8")
+compiler_validation = COMPILER_VALIDATION.read_text(encoding="utf-8")
 readme = README.read_text(encoding="utf-8")
 
 # Router must remain small and selective.
@@ -196,63 +209,113 @@ for phrase in [
     if phrase not in structural:
         errors.append(f"Structural analysis missing section: {phrase}")
 
-# Wide/pointerless compiler module must remain fully routed and cover the source methodology.
+# Compiler methodology must stay routed, modular, and selective.
 if "references/engineering/09-wide-pointerless-compiler.md" not in skill:
-    errors.append("Compiler module is not routed from SKILL.md")
+    errors.append("Compiler router is not routed from SKILL.md")
 if "engineering/09-wide-pointerless-compiler.md" not in ENGINEERING_ROUTER.read_text(encoding="utf-8"):
-    errors.append("Compiler module is not routed from engineering router")
+    errors.append("Compiler router is not routed from engineering router")
 if "09-wide-pointerless-compiler.md" not in readme:
-    errors.append("README does not document compiler module")
+    errors.append("README does not document compiler router")
+
+if COMPILER_MODULE.stat().st_size > 5000:
+    errors.append(f"Compiler router is too large: {COMPILER_MODULE.stat().st_size} bytes")
+
+compiler_router_links = re.findall(r"\((compiler/[^)]+\.md)\)", compiler_module)
+expected_compiler_links = {
+    "compiler/10-pipeline-elimination.md",
+    "compiler/20-wide-frontend.md",
+    "compiler/30-pointerless-state.md",
+    "compiler/40-validation.md",
+}
+if set(compiler_router_links) != expected_compiler_links:
+    errors.append(
+        "Compiler router links do not match the four focused blocks: "
+        + ", ".join(sorted(set(compiler_router_links)))
+    )
+for target in compiler_router_links:
+    if not (ROOT / "references/engineering" / target).is_file():
+        errors.append(f"Compiler routed file does not exist: {target}")
+
+compiler_blocks = {
+    "pipeline": compiler_pipeline,
+    "frontend": compiler_frontend,
+    "state": compiler_state,
+    "validation": compiler_validation,
+}
+for name, text in compiler_blocks.items():
+    path = {
+        "pipeline": COMPILER_PIPELINE,
+        "frontend": COMPILER_FRONTEND,
+        "state": COMPILER_STATE,
+        "validation": COMPILER_VALIDATION,
+    }[name]
+    if path.stat().st_size > 7500:
+        errors.append(f"Compiler block is too large: {path} ({path.stat().st_size} bytes)")
+    if "## Decision tree" not in text:
+        errors.append(f"Compiler block lacks one primary decision tree: {path}")
+    if text.count("## Decision tree") != 1:
+        errors.append(f"Compiler block must have exactly one primary decision tree: {path}")
 
 for phrase in [
-    "# Wide, Pointerless Compiler Design",
-    "## 1. Start from the whole process",
-    "## 2. Eliminate representations before local optimization",
-    "## 3. Decide whether an intermediate representation should exist",
-    "## 4. Wide tokenization: classify batches, not individual bytes",
-    "## 5. Batch extraction instead of branch-per-event extraction",
-    "## 6. Keep a stable frontend batch contract",
-    "## 7. Store the minimum token information",
-    "## 8. Fold insignificant bytes into progress metadata",
-    "## 9. Decode keywords and lexical identity once",
-    "## 10. Use pointerless parser state",
-    "## 11. Emit IR directly when syntax staging adds no independent value",
-    "## 12. Programming Without Pointers: long-lived relation rule",
-    "## 13. Decide pointer/object versus index explicitly",
-    "## 14. Flatten nested containers into ranges/CSR",
-    "## 15. Pool repeated or numerous strings",
-    "## 16. Resolve logical identity once",
-    "## 17. Separate builder and frozen representations",
-    "## 18. Choose fixed array, exact allocation, or growable builder from cardinality",
-    "## 19. Reject benchmark-only optimization layers",
-    "## 20. Keep one canonical production path",
-    "## 21. Delete legacy code by observable responsibility",
-    "## 22. Detect duplicate semantic layers",
-    "## 23. Decide whether a layer adds information or only changes layout",
-    "## 24. Separate hot semantic state from cold metadata",
-    "## 25. Fuse semantic passes when the same data is already hot",
-    "## 26. Measure compiler stages independently",
-    "## 27. Keep an optimization only after causal validation",
-    "## 28. Compare semantic outputs when representations change",
-    "## 29. Fail closed on unsupported syntax or semantics",
-    "## 30. Complete decision process",
-    "## 31. Reference target architecture",
-    "## Coverage checklist for this module",
+    "## Choose one primary block",
+    "Start with one block",
+    "## Decision language",
+    "choose `MEASURE`",
+    "Do not use a lower-level block to justify a higher-level stage",
 ]:
     if phrase not in compiler_module:
+        errors.append(f"Compiler router missing cognitive-load rule: {phrase}")
+
+compiler_combined = "\n".join(
+    [compiler_pipeline, compiler_frontend, compiler_state, compiler_validation]
+)
+for phrase in [
+    "remove stage",
+    "Does R add information required downstream?",
+    "wide classification",
+    "start_mask",
+    "batch/SWAR/vector compaction",
+    "tags[]",
+    "extents[]",
+    "token_ix",
+    "byte_cursor",
+    "typed ID",
+    "offsets[]",
+    "string_bytes[]",
+    "builder",
+    "frozen",
+    "hot from cold",
+    "benchmark-only",
+    "semantic outputs",
+    "Fail closed",
+    "falsifiable prediction",
+]:
+    if phrase not in compiler_combined:
         errors.append(f"Compiler methodology coverage missing: {phrase}")
 
-# Compiler module must remain methodology-focused rather than project-specific.
+for pattern in [
+    r"\bmaterially\b",
+    r"\bwhen justified\b",
+    r"\bcheaper\b",
+    r"\blarge enough\b",
+    r"\bworth it\b",
+    r"\bbest measured\b",
+]:
+    if re.search(pattern, compiler_combined, re.I):
+        errors.append(f"Vague compiler decision predicate found: {pattern}")
+
 for forbidden in [
-    "MeshIR ≈",
+    "MeshIR",
     "MeshSema",
     "CanonicalMesh",
     "model_ranges[]",
     "model_roots[]",
-    "Duck Mesh reference design",
+    "Duck Mesh",
+    "821 ms",
+    "3.6×",
 ]:
-    if forbidden in compiler_module:
-        errors.append(f"Compiler module contains project-specific detail: {forbidden}")
+    if forbidden in compiler_module or forbidden in compiler_combined:
+        errors.append(f"Compiler methodology contains project-specific detail: {forbidden}")
 
 # Markdown fences must remain balanced.
 for path in ROOT.rglob("*.md"):
