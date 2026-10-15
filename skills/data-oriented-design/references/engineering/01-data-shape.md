@@ -90,7 +90,7 @@ If a scheduler repeatedly scans only `status` across one million work items, tes
 
 ```text
 Does a build-time map/AST/growable buffer have a consumer after freeze?
-  NO -> RELEASE it at its last consumer.
+  NO -> REMOVE it after its last consumer.
   YES
     |
     |-- Does runtime need the full builder structure?

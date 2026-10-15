@@ -78,7 +78,7 @@ Is an identical bounded fragment rebuilt several times in one operation?
     |
     |-- Does preparing it once preserve ordering/version/authority semantics?
           NO -> KEEP separate construction.
-          YES -> BATCH/PREPARE once locally and reuse it.
+          YES -> BATCH once locally and reuse it.
 ```
 
 ### Example: quoted identifiers

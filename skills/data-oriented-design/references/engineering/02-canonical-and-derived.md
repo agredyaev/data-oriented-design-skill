@@ -14,7 +14,7 @@ Do two retained structures encode the same semantic facts?
     |     NO
     |
     |-- Do both accept independent mutation?
-          YES -> FINDING: competing authorities; choose one canonical source.
+          YES -> REMOVE/MERGE the competing authority after choosing one canonical source.
           NO -> remove the redundant retained copy unless a consumer/budget justifies it.
 ```
 
@@ -52,7 +52,7 @@ Has raw input already been validated/normalized into a typed value?
     |
     |-- Does a later consumer require the original bytes/text semantics?
     |     YES -> keep the original boundary data it needs.
-    |     NO -> PROPAGATE the admitted typed value.
+    |     NO -> KEEP the admitted typed value and pass it downstream.
 Does a later stage parse/normalize/hash the same identity again?
   YES -> REMOVE the repeated work unless validity/version changed.
 ```
