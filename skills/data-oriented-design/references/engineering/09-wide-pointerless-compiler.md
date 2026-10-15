@@ -83,4 +83,4 @@ Use the existing general DOD packs instead of duplicating them:
 
 If the current question can be answered from the selected block, stop loading references.
 
-If two consecutive local compiler changes do not materially move the declared target, return to Structural analysis and Pipeline elimination instead of loading more low-level rules.
+If two consecutive local compiler changes fail the declared target acceptance rule, return to Structural analysis and Pipeline elimination instead of loading more low-level rules.
