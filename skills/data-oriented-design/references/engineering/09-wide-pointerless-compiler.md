@@ -17,6 +17,17 @@ The compiler methodology has one top-level rule:
 
 Start with one block. Load a second block only when the finding crosses that boundary.
 
+## Decision language
+
+Use these terms consistently:
+
+- `REQUIRED` — the contract or a named consumer requires it.
+- `MEASURED` — matched evidence shows the cost or benefit.
+- `WITHIN BUDGET` — the path satisfies a declared bound.
+- `MEASURE` — evidence needed to choose the branch is missing.
+
+Do not interpret words such as "material", "cheap", "large", or "worth it" from intuition. If no contract bound or measurement decides the branch, choose `MEASURE`.
+
 ## Route broad redesigns
 
 For a full compiler/frontend redesign:
