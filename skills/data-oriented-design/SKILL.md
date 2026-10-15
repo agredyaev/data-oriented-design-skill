@@ -35,6 +35,8 @@ Start with at most three references after this router. Load another file only wh
 | A concrete Rust transformation would clarify the design | [Examples](references/engineering/08-examples.md) |
 | Compiler/tokenizer/parser/IR | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) |
 
+For compiler/frontend code, use [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) as the primary engineering route. Load generic engineering blocks only when that router sends the finding there.
+
 Use [engineering rules index](references/dod-yagni-engineering-rules.md) only when the problem is mixed or the correct block is unclear.
 
 ## Performance routing
