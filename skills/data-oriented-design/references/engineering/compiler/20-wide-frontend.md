@@ -1,8 +1,8 @@
 # Wide Frontend and Direct Parsing
 
-Use this block when tokenization, lexical classification, token extraction, parser staging, or repeated lexical decoding is measured as part of the target frontend cost, exceeds a declared budget, or is the structural cause under review.
+Use this block for tokenizer and parser-front-end costs. Typical signals are lexical classification, token extraction, parser staging, or repeated lexical decoding.
 
-Do not introduce SIMD or a custom token format before the frontend cost is measured, unless the structural change removes a representation without making a performance claim.
+Do not introduce SIMD or a custom token format before measuring the frontend cost. A representation-removal change may proceed without a speed claim when code evidence is sufficient.
 
 ## Decision tree
 
@@ -110,7 +110,7 @@ packed selected positions
 
 Use vector, SWAR, BMI-style, or scalar fallback techniques as appropriate. Keep the parser-facing result independent of the backend when practical.
 
-Do not keep a more complex compaction scheme unless it passes the declared acceptance rule on the representative workload or removes required complexity elsewhere.
+Keep a more complex compaction scheme only if it passes the declared acceptance rule. A separate structural simplification can also justify it, but name the removed structure explicitly.
 
 ## 3. Keep a stable parser-facing batch contract
 
@@ -192,7 +192,7 @@ bytes -> slice/string -> compare/hash/normalize repeatedly
 
 Carry the typed result forward while its identity remains valid.
 
-If retaining the typed result costs more than intentional recomputation, route that decision to the pointerless-state and measurement blocks instead of applying this rule blindly.
+If propagation versus recomputation is not decided by the contract, route the trade-off to Pointerless state and measurement. Do not guess.
 
 ## 7. Keep parser state pointerless when the grammar permits it
 
