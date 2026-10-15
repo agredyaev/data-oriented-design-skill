@@ -9,33 +9,37 @@ The rule is not "no pointers". The rule is: persistent semantic identity and top
 ```text
 START
   |
-  |-- Is the relationship long-lived semantic state?
-  |      |-- NO -> local pointers/references are allowed; stop.
+  |-- Is this relationship retained semantic state?
+  |      |-- UNKNOWN -> inspect lifetime/owner.
+  |      |-- NO -> KEEP local pointers/references if simplest; stop this branch.
   |      '-- YES
   |
-  |-- Does the target require independent lifetime or stable address identity?
-  |      |-- YES -> keep pointer/object ownership; name the requirement.
-  |      '-- NO -> use a typed ID, offset, or range.
+  |-- Does the contract require stable address or independently owned object lifetime?
+  |      |-- UNKNOWN -> resolve contract before changing ownership.
+  |      |-- YES -> KEEP pointer/object ownership; name the requirement.
+  |      '-- NO -> USE typed ID, offset, or range.
   |
-  |-- Does each row own a variable child/list allocation?
-  |      |-- YES -> test one flat side array + ranges/CSR.
-  |      '-- NO
+  |-- Does each retained row own a variable-size child allocation?
+  |      |-- YES -> TEST flat side array + ranges/CSR.
+  |      '-- NO -> continue.
   |
-  |-- Are many strings individually allocated?
-  |      |-- YES -> test byte pooling; add interning only if canonical identity/dedup is required or measured to improve the target.
-  |      '-- NO
+  |-- Is per-string ownership a measured cost or retained-memory budget issue?
+  |      |-- UNKNOWN -> MEASURE.
+  |      |-- YES -> TEST byte pooling; add interning only for required/measured canonical reuse.
+  |      '-- NO -> continue.
   |
-  |-- Is logical identity normalized/hashed/resolved more than once?
-  |      |-- YES -> resolve once and propagate typed identity, unless matched measurement shows recomputation has lower total cost.
-  |      '-- NO
+  |-- Is one logical identity normalized/hashed/resolved more than once?
+  |      |-- YES -> PROPAGATE typed identity, unless matched measurement favors recomputation.
+  |      '-- NO -> continue.
   |
-  |-- Does frozen state retain builder capacity/maps/mutation machinery?
-  |      |-- YES -> freeze/pack to exact immutable storage.
-  |      '-- NO
+  |-- Does frozen state retain growth/maps/mutation machinery with no consumer?
+  |      |-- YES -> REMOVE it or FREEZE/PACK.
+  |      '-- NO -> continue.
   |
-  |-- Do hot passes read only a subset of wide state?
-         |-- YES -> test SoA or hot/cold side storage.
-         '-- NO -> keep the simpler layout.
+  |-- Does a target hot pass fetch fields it does not use?
+         |-- UNKNOWN -> MEASURE field access / traffic.
+         |-- YES -> TEST SoA or hot/cold storage.
+         '-- NO -> KEEP the simpler layout.
 ```
 
 When cost is uncertain, mark the branch `MEASURE`.
