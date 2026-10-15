@@ -187,6 +187,20 @@ newline
 
 Boundaries should be derived from transitions in masks when possible. For a word-class bitset, starts and ends are bulk transition operations rather than one branch per character.
 
+Conceptually:
+
+```text
+start_mask =
+    word
+    AND NOT(previous_word_shifted)
+
+end_mask =
+    word
+    AND NOT(next_word_shifted)
+```
+
+This computes all word-run boundaries for the batch together.
+
 The exact vector width is an implementation choice. Do not hard-code a width from an example unless the backend, alignment, fallback path, and measurements justify it.
 
 ## 5. Batch extraction instead of branch-per-event extraction
@@ -233,6 +247,28 @@ tag[] + extent[]
 ```
 
 Treat `512 bytes`, `@Vector(512, u8)`, and `8 × u64` as a project-specific realization, not a universal DOD rule.
+
+For the Duck Mesh reference design, preserve the concrete mapping:
+
+```text
+@Vector(512, u8)
+        ↓
+512 character lanes
+        ↓
+@Vector(8, u64)
+        ↓
+8 × 64-bit classification bitstrings
+```
+
+The implementation backend may use:
+
+```text
+AVX-512
+NEON
+SVE
+BMI2/SWAR
+portable fallback
+```
 
 The important invariant is this:
 
@@ -576,6 +612,16 @@ direct parser for normal cases
 
 A legacy parser may temporarily remain as an independent test oracle. It should not remain an alternate production authority once equivalence and migration are complete.
 
+The Duck Mesh canonical production path from the source methodology is:
+
+```text
+SQL
+→ direct frontend
+→ MeshIR
+→ MeshSema
+→ CanonicalMesh
+```
+
 ## 21. Delete legacy code by observable responsibility
 
 Use this test:
@@ -699,6 +745,23 @@ Use representative workloads. Report improvements only against a baseline that e
 
 An optimization that reduces storage but leaves wall time unchanged is a memory/storage win, not a CPU win.
 
+Keep the source methodology's measured frontend example as a reference for what stage-level evidence looks like:
+
+```text
+old AST frontend:
+MeshIR ≈ 821 ms
+
+direct parser with intermediate positions:
+MeshIR ≈ 215–228 ms
+
+tag + extent after removing synthetic template reuse:
+MeshIR ≈ 226 ms
+
+821 / 226 ≈ 3.6×
+```
+
+The important comparison is the last one because it does not depend on synthetic shape caching. These numbers are project evidence, not universal expected gains.
+
 ## 27. Keep an optimization only after causal validation
 
 Use this gate:
@@ -731,6 +794,7 @@ Candidate invariants can include:
 same accepted/rejected inputs
 same relation count
 same expression count
+same row count
 same outputs
 same dependencies
 same value lineage
@@ -873,6 +937,80 @@ A representative target for a SQL/compiler frontend is:
                         │
                         ▼
                 canonical result
+```
+
+For Duck Mesh, the source methodology defines the more concrete target below. Keep this as a project-specific realization of the generic architecture above:
+
+```text
+                       SQL bytes
+                           │
+                           ▼
+              ┌───────────────────────┐
+              │ 512-byte classifier   │
+              │ 8 × u64 bitstrings    │
+              └──────────┬────────────┘
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ mask algebra          │
+              │ words / punctuation   │
+              │ comments / quotes     │
+              │ boundaries            │
+              └──────────┬────────────┘
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ batch compression     │
+              └──────────┬────────────┘
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ token stream          │
+              │ tags[]                │
+              │ extents[]             │
+              │ leading_bytes         │
+              └──────────┬────────────┘
+                         │
+                 token_ix + byte_cursor
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ pointerless parser    │
+              │ bounded scratch       │
+              │ token-index ranges    │
+              └──────────┬────────────┘
+                         │
+                    direct emit
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ MeshIR SoA            │
+              │ tags[]                │
+              │ data_a[]              │
+              │ data_b[]              │
+              │ payload[]             │
+              │ extra[]               │
+              │ string_bytes[]        │
+              │ model_ranges[]        │
+              │ model_roots[]         │
+              └──────────┬────────────┘
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ dependency CSR        │
+              └──────────┬────────────┘
+                         │
+                         ▼
+              ┌───────────────────────┐
+              │ fused MeshSema        │
+              │ dense scopes          │
+              │ type inference        │
+              │ function resolution   │
+              │ lineage               │
+              └──────────┬────────────┘
+                         │
+                         ▼
+                   CanonicalMesh
 ```
 
 Central invariant:
