@@ -118,7 +118,7 @@ A separate structural simplification can also justify it. Name the removed struc
 
 ## 3. Keep a stable parser-facing batch contract
 
-The batch width is an implementation choice.
+The generic methodology leaves batch width to the task. If the task selects the 512-byte contract, use the [PWP/512-byte profile](25-pwp-512-profile.md); preserve that logical width across backend changes. That profile also covers on-demand classification and compact operator/keyword lookup.
 
 A concrete implementation may use a fixed byte block and several machine-word bitsets. The methodology requires only:
 
@@ -262,3 +262,4 @@ A wide frontend change is accepted only when:
 - the predicted physical metric changes;
 - the target frontend phase improves if speed is claimed;
 - end-to-end performance is reported separately.
+

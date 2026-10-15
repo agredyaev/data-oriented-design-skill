@@ -56,6 +56,27 @@ class ValidateSkillTests(unittest.TestCase):
         self.append('references/performance/10-foundation.md', '### DOD-001 decision tree')
         self.assert_invalid('DOD-001: expected 1 decision tree, found 2')
 
+    def test_rule_action_cannot_disappear(self):
+        path = self.skill / 'references/performance/10-foundation.md'
+        path.write_text(path.read_text().replace('- **Action:**', '- **Removed:**', 1))
+        self.assert_invalid('DOD-001: missing nonempty Action field')
+
+    def test_empty_rule_action(self):
+        path = self.skill / 'references/performance/10-foundation.md'
+        text = path.read_text()
+        start = text.index('- **Action:**')
+        end = text.index('\n', start)
+        path.write_text(text[:start] + '- **Action:**' + text[end:])
+        self.assert_invalid('DOD-001: missing nonempty Action field')
+
+    def test_empty_tree_cannot_pass_on_heading_alone(self):
+        path = self.skill / 'references/performance/10-foundation.md'
+        text = path.read_text()
+        start = text.index('```text') + len('```text\n')
+        end = text.index('```', start)
+        path.write_text(text[:start] + text[end:])
+        self.assert_invalid('DOD-001: missing nonempty decision tree body')
+
     def test_external_links_and_fenced_examples_are_not_local_routes(self):
         self.append('references/modules.md', '[docs](https://example.org/manual.md)\n'
                     '```text\n[illustration](nonexistent.md)\n`also-not-a-route.md`\n```')

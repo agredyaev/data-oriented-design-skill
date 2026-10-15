@@ -16,6 +16,7 @@ Select capabilities by the result requested. Modules are independent instruction
 | Experiment | evaluate a concrete cost claim | candidate/hypothesis, baseline, workload, acceptance rule | matched evidence and accepted/rejected/unverified claim | [Measurement](performance/01-measurement.md), [Acceptance](performance/10-foundation.md) |
 | Correctness | assess a proposed/implemented change | affected contract, code/design diff, relevant tests/oracle | preserved/violated invariants and missing verification | [Correctness boundaries](engineering/06-correctness-boundaries.md) |
 | Implementation | execute an accepted decision | scoped contract, concrete decision, affected code | changed code, superseded state removed, verification result | [Implementation](workflow.md#6-implement-one-structural-decision-at-a-time), [Verification](workflow.md#7-verify-proportionally) |
+| PWP / 512-byte profile | selected 512-byte contract or measured lexical cause | grammar, source lifetime, backend targets; cost evidence for speed claims | selected mask/compaction/lookup technique and parity gates | [PWP/512 profile](engineering/compiler/25-pwp-512-profile.md) |
 | Compiler specialization | apply a compiler-specific decision | relevant pipeline, lexical, retained-state, or validation inputs | result of the selected compiler block | [Compiler router](engineering/09-wide-pointerless-compiler.md) |
 
 ## Composition rules

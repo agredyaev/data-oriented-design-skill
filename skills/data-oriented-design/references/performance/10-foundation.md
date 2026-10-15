@@ -156,7 +156,7 @@ Can a reader reproduce the finding?
 
 ### DOD-013 — Make each review finding actionable
 - **Symptom:** A review says “use SoA” or “make this faster” without a loop, scale, or proof.
-- **Action:** For an actionable finding, identify the code location, workload/baseline, cause, before → after transformation, preserved behavior, and acceptance evidence. Attach the applicable rule ID. Use the proportional report in [Workflow](../workflow.md); do not produce a disposition for every considered rule unless the user requests a coverage audit.
+- **Action:** For an actionable finding, identify the code location, operation, workload/baseline, cause, before → after transformation, preserved behavior, and acceptance evidence. For a performance finding, also state the hypothesis, predicted physical metric, observed result, and verdict. Attach the applicable rule ID. Use the proportional report in [Workflow](../workflow.md); do not produce a disposition for every considered rule unless the user requests a coverage audit.
 - **Check:** A reader can reproduce the calculation or measurement and decide whether to implement the change. Never invent profile percentages or latency.
 - **Example:** `Illustrative UNVERIFIED DOD-003/DOD-007: load loops over M=20,000 records for each of D=200 owners (4,000,000 comparisons; O(DM)). Two-pass grouping by checked dense owner ID costs O(D+M) time and extra space. Preserve per-owner order and duplicate errors. Matched load time and peak bytes: not measured.`
 

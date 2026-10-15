@@ -219,7 +219,7 @@ Add only the evidence required by the claim:
 
 A local microbenchmark does not prove an end-to-end improvement.
 
-If two consecutive local changes on the same representation do not materially move the target metric, stop micro-tuning and return to the current/candidate process maps.
+If two consecutive local changes on the same representation fail the declared target acceptance rule, stop micro-tuning and revisit the affected current/candidate process maps.
 
 ## Completion rule
 

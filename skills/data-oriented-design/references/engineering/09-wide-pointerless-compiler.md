@@ -12,6 +12,7 @@ The compiler methodology has one top-level rule:
 | --- | --- |
 | Too many AST/IR/lowering stages, duplicate semantic layers, legacy parser path, repeated whole-pipeline passes | [Pipeline elimination](compiler/10-pipeline-elimination.md) |
 | Tokenizer/lexer cost, byte-at-a-time classification, mask extraction, compact tokens, direct parser emission | [Wide frontend](compiler/20-wide-frontend.md) |
+| Explicit PWP/512-byte profile, 8×u64 masks, on-demand classification, compact operator/keyword lookup | [PWP and 512-byte profile](compiler/25-pwp-512-profile.md) |
 | Pointer graphs, nested child containers, string ownership, repeated identity resolution, builder→frozen state, hot/cold layout | [Pointerless state](compiler/30-pointerless-state.md) |
 | Correctness equivalence, benchmark representativeness, fail-closed behavior, acceptance or rejection of an optimization | [Validation](compiler/40-validation.md) |
 

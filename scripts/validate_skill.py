@@ -139,6 +139,24 @@ def validate(repo):
         for rule in sorted(expected | counts.keys()):
             if counts[rule] != (1 if rule in expected else 0):
                 errors.append(f'{rule}: expected {1 if rule in expected else 0} {label}, found {counts[rule]}')
+    # A registry heading alone does not preserve the methodology: each rule
+    # needs an actionable body and a nonempty decision tree.
+    definitions = re.findall(
+        r'^### (DOD-\d{3}) — [^\n]+\n([\s\S]*?)(?=^### |^## |\Z)',
+        content, re.M,
+    )
+    for rule, body in definitions:
+        for field in ('Symptom', 'Action', 'Check', 'Example'):
+            if not re.search(r'\*\*' + field + r':\*\*[ \t]+\S', body):
+                errors.append(f'{rule}: missing nonempty {field} field')
+    trees = re.findall(
+        r'^### (DOD-\d{3}) decision tree\n([\s\S]*?)(?=^### |^## |\Z)',
+        content, re.M,
+    )
+    for rule, body in trees:
+        fenced = re.search(r'^```[^\n]*\n(.*?)^```', body, re.M | re.S)
+        if not fenced or not fenced.group(1).strip():
+            errors.append(f'{rule}: missing nonempty decision tree body')
     for path, text in documents.items():
         for rule in sorted(set(re.findall(r'\bDOD-\d{3}\b', text)) - expected):
             errors.append(f'Unknown rule ID in {path.relative_to(root)}: {rule}')
@@ -153,8 +171,12 @@ def validate(repo):
     compiler_router = root / 'references/engineering/09-wide-pointerless-compiler.md'
     if compiler_router in graph:
         blocks = {p for p in graph[compiler_router] if p.parent == root / 'references/engineering/compiler'}
-        if len(blocks) != 4:
-            errors.append('Compiler router must reach its four focused blocks')
+        required_blocks = {root / 'references/engineering/compiler' / name for name in (
+            '10-pipeline-elimination.md', '20-wide-frontend.md',
+            '30-pointerless-state.md', '40-validation.md',
+        )}
+        if not required_blocks.issubset(blocks):
+            errors.append('Compiler router must reach its core blocks')
         for block in blocks:
             if documents[block].count('## Decision tree') != 1:
                 errors.append(f'Compiler block requires one primary decision tree: {block.name}')

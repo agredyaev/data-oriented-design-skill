@@ -27,7 +27,7 @@ Start with at most three references after this router. Load another file only wh
 
 | Signal | Read |
 | --- | --- |
-| Object graph, pointer-heavy model, nested containers, freeze/build boundary | [Data shape](references/engineering/01-data-shape.md) |
+| PWP / programming without pointers, object graph, pointer-heavy model, nested containers, freeze/build boundary | [Data shape](references/engineering/01-data-shape.md) |
 | Canonical state, duplicate representation, stored derived fields, repeated parse/normalize/hash | [Canonical and derived data](references/engineering/02-canonical-and-derived.md) |
 | Repeated scans, clones, copies, allocations, hot-loop work, temporary caches | [Hot-path work](references/engineering/03-hot-path-work.md) |
 | Shared ownership, locks, reference counting, FFI ownership | [Ownership and concurrency](references/engineering/04-ownership-and-concurrency.md) |
@@ -35,6 +35,7 @@ Start with at most three references after this router. Load another file only wh
 | Authorization, transactions, claims/leases/fences, migrations, recovery, wire checks | [Correctness boundaries](references/engineering/06-correctness-boundaries.md) |
 | Benchmark validity, acceptance decision, review heuristics | [Measurement and review](references/engineering/07-measurement-and-review.md) |
 | A concrete Rust transformation would clarify the design | [Examples](references/engineering/08-examples.md) |
+| PWP / explicit 512-byte classification profile | [PWP and 512-byte profile](references/engineering/compiler/25-pwp-512-profile.md) |
 | Compiler/tokenizer/parser/IR | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) |
 
 For compiler/frontend code, use [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) as the primary engineering route. Load generic engineering blocks only when that router sends the finding there.
