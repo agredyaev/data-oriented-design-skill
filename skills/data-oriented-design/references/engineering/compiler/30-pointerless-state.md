@@ -126,7 +126,7 @@ nearly all unique + no equality benefit
     -> avoid interning unless another metric justifies it
 ```
 
-## 5. Resolve logical identity once when propagation is cheaper
+## 5. Resolve logical identity once when propagation wins the declared trade-off
 
 Prefer:
 
