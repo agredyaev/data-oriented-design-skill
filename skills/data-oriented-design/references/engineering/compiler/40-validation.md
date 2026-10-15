@@ -31,7 +31,7 @@ START
   |
   |-- Did end-to-end KPI improve if that was the goal?
          |-- NO -> do not claim end-to-end performance win.
-         '-- YES -> accept if added complexity is justified.
+         '-- YES -> accept only if correctness passes and every added representation/invariant has a named responsibility and stays within its declared budget.
 ```
 
 ## 1. Reject benchmark-only architecture
@@ -144,15 +144,15 @@ correctness failed
     -> reject
 
 correctness passed + target improved
-    -> keep if complexity is justified
+    -> keep if every added representation/invariant has a named responsibility and stays within its declared budget
 
 correctness passed + target unchanged
     -> keep only for a separate measured benefit
-       or a material architecture simplification
+       or a structural simplification that removes a named representation, pass, allocation class, or invariant
 
 new representation/layer added
-    -> require a general benefit large enough to pay
-       for its lifetime and invariants
+    -> require the declared acceptance rule to cover
+       its construction, lifetime, maintenance, and added invariants
 ```
 
 Do not call a storage win a speed win.
