@@ -89,4 +89,4 @@ After changed evidence invalidates an assumption, revisit only dependent decisio
 
 ## Extend a capability
 
-Add/refine a focused reference only when a recurring decision needs instructions not already covered. Route it directly from this map or `SKILL.md`. Declare only real information dependencies. Reuse existing contract, correctness, measurement, and reporting rules; do not create a registration framework.
+Add/refine a focused reference only when a recurring decision needs instructions not already covered. Route it directly from this map or the entry router. Declare only real information dependencies. Reuse existing contract, correctness, measurement, and reporting rules; do not create a registration framework.
