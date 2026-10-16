@@ -174,7 +174,7 @@ def validate(repo):
         errors.append('Primary DOD/PWP definitions, preflight and structural override must precede task-mode routing')
     if 'Do **not** accept YAGNI-only cleanup' not in router:
         errors.append('Missing structural route override')
-    structural_row = router.find('| Architecture redesign or structural cleanup with OOP/layer signals |')
+    structural_row = router.find('| Architecture redesign or scoped change touching C4 structural candidates |')
     yagni_row = router.find('| Local YAGNI cleanup **only after structural override check** |')
     if not (routing < structural_row < yagni_row):
         errors.append('Structural DOD route must precede local YAGNI in task-mode routing')
