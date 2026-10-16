@@ -83,7 +83,7 @@ Apply the element-necessity decisions in [Workflow](../workflow.md#3-apply-the-e
 
 Do not preserve a layer because it already exists. Do not force an array, typed ID, SoA, CSR, interning scheme, or packing pass without checking the contract and workload.
 
-A candidate can keep the current design. “No justified simplification” is a valid conclusion when supported by code/contract evidence. Missing evidence is an unknown, not a reason to fabricate a defect.
+For a requested OOP → DOD/PWP redesign, construct the [target operations and owned data](10-oop-to-dod.md) before deciding which current mechanisms remain. If the current design already matches that target, show the correspondence. Missing evidence is an unknown, not proof that the existing architecture is necessary.
 
 ## Comparing candidates
 
@@ -95,6 +95,6 @@ When the trade-off depends on cost, mark the candidate `UNVERIFIED` and name the
 
 ## Escalation after ineffective tuning
 
-Trace each optimization through the local metric, component wall time, and declared target. If two consecutive local changes on the same representation fail the declared target acceptance rule, stop tuning it. Revisit the current/candidate maps and challenge stages, retained state, ownership, and boundaries. Resume local tuning only when evidence still identifies that component as relevant to the target.
+Trace each optimization through the causal metric and declared target metric. Apply the shared [progress and switching rule](../modules.md#choose-and-switch-routes). When it calls for structural analysis, revisit stages, retained state, ownership and boundaries; expand only the affected scope. A confirmed improvement toward an unmet target is progress, not a failed experiment.
 
 A local metric improvement alone does not prove an end-to-end result. Report the result class supported by evidence under [Workflow reporting](../workflow.md#proportional-result-format).

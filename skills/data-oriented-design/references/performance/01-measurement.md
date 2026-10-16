@@ -141,10 +141,15 @@ Choose the adoption verdict first, then describe the supported benefits. Result 
 Required correctness violated? -> REJECT, regardless of measured benefits.
 Required budget/guardrail violated? -> REGRESSION; reject adoption.
 Required acceptance evidence missing? -> UNVERIFIED; do not claim acceptance.
-Declared target passes? -> Accept that result if added state has a justified lifetime/cost.
-Target does not pass? -> Report TARGET UNMET; retain only for a separately justified
-                        measured benefit or named structural simplification.
+Overall target passes? -> Accept that result if added state has a justified lifetime/cost.
+Overall target unmet, but target metric shows confirmed causal progress?
+  -> Retain the useful step if its declared experiment rule and guardrails pass;
+     report TARGET UNMET and reprofile. Do not claim overall completion.
+No target progress? -> Retain only for a separately justified measured benefit or
+                      named structural simplification; otherwise reject.
 ```
+
+An overall optimization objective and a required invariant/guardrail serve different purposes. For example, reducing an existing 100 ms path toward a 60 ms objective can proceed through validated 90 and 80 ms steps; a 120 MB hard memory cap must hold at every accepted step. Do not downgrade an explicit release requirement into an optional objective: interim work is not approval to release while that requirement fails. Use [route progress](../modules.md#choose-and-switch-routes) for iteration and structural switching.
 
 - **PERFORMANCE WIN** — the declared time/throughput metric passes, with supporting causal evidence; name its scope.
 - **MEMORY WIN** — the declared retained bytes, peak bytes or artifact size passes; name which one.

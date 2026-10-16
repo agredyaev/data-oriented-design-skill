@@ -1,6 +1,6 @@
 # Data-Oriented Design Skill
 
-A language-independent skill for diagnosing data-oriented performance problems and designing simpler, measurable architectures.
+A language-independent skill for converting object-based subsystems to DOD/PWP and diagnosing data-oriented performance problems.
 
 The skill uses progressive disclosure. The skill router routes each task to the smallest relevant workflow or rule block instead of loading the full methodology. The entry file is `skills/data-oriented-design/SKILL.md`.
 
@@ -11,8 +11,8 @@ The full structural route is:
 1. define the contract;
 2. draw the current typed process and retained data;
 3. count passes, lookups, parsing, copies, allocations, synchronization, and duplicate state;
-4. remove unnecessary work or representations before tuning them;
-5. design a simpler candidate from the contract;
+4. derive target operations, owned stores and typed relationships from the contract;
+5. map old responsibilities to the target and remove superseded mechanisms;
 6. select the relevant DOD rules;
 7. validate correctness and the claimed physical/performance effect.
 
@@ -21,6 +21,8 @@ For profiler-led optimization, rank measured costs against the target, select an
 The workflow owns the default full-route composition and proportional reporting format. The module composition map supports independent capabilities and custom routes with explicit inputs, outputs, and information dependencies. Structural analysis supplies mapping and candidate-design techniques. A local fix requires only affected-behavior verification; architecture work uses typed maps and relevant deltas. Rule-by-rule reports are reserved for explicitly requested coverage audits.
 
 The performance methodology covers workload definition, scaling checks, hotspot diagnosis, access patterns, falsifiable hypotheses, matched benchmarks, and causal acceptance.
+
+An OOP → DOD/PWP conversion produces explicit passes/functions, owned data stores and typed internal relationships. Naming an old object's responsibility does not justify keeping its architecture. The transformation module requires a concrete target, removal/replacement map, and scoped evidence for remaining mechanisms. Partial conversion is reported as partial; structural conversion alone does not establish a speedup.
 
 ## Coverage
 
@@ -49,6 +51,7 @@ A compiler-specific module also covers wide classification, compact token stream
 - Performance router: `skills/data-oriented-design/references/performance-methodology.md`
 - Engineering router: `skills/data-oriented-design/references/dod-yagni-engineering-rules.md`
 - Structural analysis: `skills/data-oriented-design/references/engineering/00-structural-analysis.md`
+- OOP → DOD/PWP transformation: `skills/data-oriented-design/references/engineering/10-oop-to-dod.md`
 - Compiler DOD router: `skills/data-oriented-design/references/engineering/09-wide-pointerless-compiler.md`
 - Compiler pipeline elimination: `skills/data-oriented-design/references/engineering/compiler/10-pipeline-elimination.md`
 - Wide frontend/tokenization: `skills/data-oriented-design/references/engineering/compiler/20-wide-frontend.md`

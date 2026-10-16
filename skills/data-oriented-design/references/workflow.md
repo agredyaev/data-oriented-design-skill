@@ -46,24 +46,13 @@ Do not map unrelated parts of the repository.
 
 Every element on the current process/data map must have a concrete reason to exist.
 
-An **element** is any:
-
-- process step;
-- object or wrapper;
-- retained structure;
-- cache/index/view;
-- stored field;
-- pointer/reference relationship;
-- lock/shared-mutation point;
-- protocol/API/IPC boundary;
-- parser/normalizer/serializer;
-- abstraction layer or trait.
+An **element** is a step, object/wrapper, retained structure, cache/index/view, field, pointer relationship, lock, protocol boundary, parser/serializer, layer or trait.
 
 For each relevant element ask:
 
 | Question to establish from contract/code | If no responsibility is found after inspection |
 | --- | --- |
-| Which contract requirement or current consumer requires it? | candidate to remove |
+| Which required behavior needs its result, and which consumer observes that result? | candidate to remove |
 | Why must it be a separate step/layer rather than merged with an adjacent step? | candidate to inline/merge |
 | Why must it be retained rather than derived or local scratch? | candidate to derive/localize |
 | Why must the relationship use pointer/key identity rather than a typed ID/offset/range? | candidate to flatten |
@@ -74,7 +63,7 @@ For each relevant element ask:
 Allowed decisions:
 
 ```text
-KEEP       concrete contract/consumer requires it
+KEEP       concrete requirement needs this form; simpler alternative fails a named check
 REMOVE     no current responsibility
 MERGE      separate step/layer adds no required boundary
 DERIVE     deterministic value does not need retained authority
@@ -87,40 +76,21 @@ UNKNOWN    required consumer/semantic fact is not yet established
 
 Absence of evidence is not evidence of no consumer. For `UNKNOWN`, inspect callers, persistence and lifetime before removal. `DERIVE` requires exact inputs and their lifetime; `FLATTEN` requires preserved identity and mutation semantics. These are candidates until their correctness and applicable cost gates pass.
 
+For a full redesign, first extract responsibilities here; finalize KEEP/replace decisions only against the target in step 4. A current internal caller proves use, not necessity of the representation. Preserve required computations/checks and adapt internal callers to the target.
+
 Do not require documentation for elements already obvious from the code and contract. Record only decisions that affect the design.
 
 ## 4. Design the replacement from the contract
 
-Create a candidate before changing the old object model. Keep the current process when no justified simplification exists.
+For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md). Derive target operations/data from behavior before mapping old responsibilities onto them. Existing services do not prescribe the target.
 
-For a performance task, establish the baseline and measured bottleneck before selecting a transformation. Use [Performance diagnosis](performance/00-diagnosis.md) when the cause is unknown. Missing evidence permits a concrete candidate marked `UNVERIFIED`, but never an invented performance finding.
+For a cost claim, establish baseline and cause through [Diagnosis](performance/00-diagnosis.md). Without measurements, a concrete proposal remains `UNVERIFIED`.
 
 Create a candidate that preserves the contract and targets a named recurring cost or unnecessary structure. An index can add state to remove repeated search; count its build, update, memory and identity costs. A simpler-looking map alone does not establish a faster candidate.
 
-```text
-CURRENT
-A → B → C → D → E → output
+Name types, reads/writes, owners and lifetimes. Mark old elements removed, merged, replaced or required by a demonstrated constraint.
 
-CANDIDATE
-A → C → E → output
-```
-
-Name concrete data types in both maps.
-
-For retained data, prefer the simplest representation that supports the candidate process:
-
-```text
-State
-  +-- rows[]
-  +-- offsets[]
-  +-- ids[]
-  +-- side_data[]
-  +-- indexes[]
-```
-
-Use detailed DOD rules to refine the candidate, in either execution route.
-
-The candidate is valid only if every new element also passes the element-necessity test.
+Refine with selected DOD rules. Every new element also needs the necessity test.
 
 ## 5. Compare current and candidate
 
@@ -130,7 +100,7 @@ For a structural delta, compare current/candidate steps, passes, retained repres
 
 Use `?` when unknown.
 
-Reject candidates that violate the contract or a required budget. Compare remaining candidates on the declared target, including lifetime costs. If evidence cannot distinguish them, retain the current design or measure the disputed cost. For structural simplification, name the eliminated responsibility-free element and any new invariants; do not infer speed from counts.
+Reject contract/guardrail violations. Compare the target and lifetime costs; measure disputed costs. For structural simplification, name removed elements, where their required responsibilities move, and new invariants. Counts alone do not prove speed.
 
 Do not prefer a design merely because it changes fewer lines.
 
@@ -167,7 +137,7 @@ Add only the evidence required by the claim:
 
 A local microbenchmark does not prove an end-to-end improvement.
 
-If two consecutive local changes on the same representation fail the declared target acceptance rule, stop micro-tuning and revisit the affected current/candidate process maps.
+Use [progress and switching](modules.md#choose-and-switch-routes) to distinguish a useful intermediate improvement from a failed experiment or completed target.
 
 ## Completion rule
 
@@ -176,6 +146,7 @@ Apply these gates to the selected scope. Analysis-only work completes with its c
 - the required contract still holds;
 - every added element has a concrete responsibility;
 - removed elements have no remaining required consumer;
+- a requested OOP → DOD/PWP conversion implements the target operations, owners and relationships; name partial scope or blockers explicitly;
 - new construction, update, lifetime and identity obligations are accounted for;
 - any performance claim has matched evidence;
 - remaining unknowns are stated explicitly.

@@ -1,13 +1,13 @@
 ---
 name: data-oriented-design
-description: Use when analyzing or changing code for data layout, retained memory, hot paths, ownership or lifetime, repeated parsing or copying, shared mutable state, YAGNI cleanup, architecture simplification, or correctness-preserving refactoring.
+description: Use for OOP-to-DOD/PWP redesign, data layout, retained memory, hot paths, ownership or lifetime, repeated parsing or copying, shared mutable state, YAGNI cleanup, architecture simplification, or correctness-preserving refactoring.
 ---
 
 # Data-Oriented Design
 
 Use this file as the entry router. Select one module or compose several by task type. Do not read the whole skill tree by default.
 
-Reuse valid existing evidence; execute only missing work. For a custom composition, use the [module contracts](references/modules.md#module-contracts).
+Reuse valid evidence and execute only missing work.
 
 ## Choose the task mode
 
@@ -17,13 +17,13 @@ Reuse valid existing evidence; execute only missing work. For a custom compositi
 | Review one design choice or supplied candidate | matching engineering block | correctness or measurement when the conclusion depends on them |
 | Implement a scoped change | matching engineering block + [workflow verification](references/workflow.md#7-verify-proportionally) | only missing contract/ownership inputs; no mandatory full redesign |
 | Diagnose a performance problem or iterate profiler hotspots | [module composition](references/modules.md) + [performance diagnosis](references/performance/00-diagnosis.md) | matching rule pack; structural analysis for broad/shared causes or ineffective local tuning |
-| Redesign object/data architecture | [workflow](references/workflow.md) + [structural analysis](references/engineering/00-structural-analysis.md) | matching data/ownership block; performance methodology for speed/memory claims |
+| Redesign object/data architecture; OOP → DOD/PWP | [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) | mapping techniques or selected data/ownership block |
 | Cleanup/YAGNI review | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow when code will change |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
 
 Requested scope takes precedence: a focused compiler/performance question stays focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
 
-Start with at most three references after this router. This is an initial reading budget, not a limit on necessary correctness checks. Load another file only for a missing input or a crossed boundary.
+Start with at most three references after this router. Load more for missing inputs or necessary correctness checks.
 
 ## Engineering routing
 
@@ -62,10 +62,11 @@ Examples are illustrative, not measurements of the user's code. Compare construc
 ## Non-negotiable rules
 
 - Establish the contract before changing representation, ownership, or boundaries.
+- For OOP → DOD/PWP, derive target operations and owned data before retaining old mechanisms. Required behavior does not justify its current object/layer.
 - Before a structural redesign, establish the affected typed process and retained data; reuse valid existing maps. A scoped module needs only its declared inputs.
 - Check whether the selected mechanism is necessary before tuning it; every added representation needs a named consumer and lifetime.
 - Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
-- Accept performance claims only from matched evidence; after two consecutive local changes on the same representation fail the declared target acceptance rule, revisit the affected structure.
+- Accept performance claims only from matched evidence; use the [progress and switching rule](references/modules.md#choose-and-switch-routes).
 - Report regressions, unknowns, missing measurements, and rejected candidates.
 
 ## Completion

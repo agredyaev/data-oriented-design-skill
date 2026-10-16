@@ -86,5 +86,5 @@ Use the existing general DOD packs instead of duplicating them:
 
 If the current question can be answered from the selected block, stop loading references.
 
-If two consecutive local changes on the same representation fail the declared target acceptance rule, stop tuning it. Return to Structural analysis and Pipeline elimination for the affected scope.
+Apply the shared [progress and switching rule](../modules.md#choose-and-switch-routes). Two valid experiments without supported target progress call for Structural analysis and Pipeline elimination in the affected scope. Confirmed progress toward an unmet target calls for reranking, not a failure label.
 

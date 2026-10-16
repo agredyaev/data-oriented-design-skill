@@ -20,6 +20,8 @@ Arc<Mutex<T>>
 
 and require a concrete justification.
 
+For a requested domain-model conversion, apply [OOP → DOD/PWP](10-oop-to-dod.md#decision-tree-replace-domain-object-ownership). Trace the accesses and test explicit owners, partitions or ownership transfer. Existing shared access is evidence of the current design; it does not prove that a per-entity lock or reference count is required in the target. Any remaining mechanism needs the specific violated constraint of the simpler alternative, not a restatement of its current responsibility.
+
 Treat this as strongly suspicious:
 
 ```rust

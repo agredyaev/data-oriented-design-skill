@@ -2,7 +2,9 @@
 
 # 8. Correctness Rules That Override Cleanup
 
-DOD/YAGNI cleanup must never remove correctness boundaries.
+DOD/YAGNI cleanup must preserve the guarantees at correctness boundaries. For each affected check, identify the predicate, authority/data version, ordering or atomicity point, and failure behavior. Preserve those properties in the target. They do not require retaining the class, service, wrapper or dispatch chain that currently implements them. An external ABI/protocol constraint must be identified separately.
+
+Example: a request is admitted, queued, then executed under a live lease. Removing `LeaseValidationService` can move its check directly into the execution transaction immediately before mutation. Moving the check to initial admission would allow an expired lease to authorize execution and is invalid. The service object can disappear; the authoritative execution-time check must remain.
 
 ## SAFE-01 — Preserve live authority checks
 
