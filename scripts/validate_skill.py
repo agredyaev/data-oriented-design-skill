@@ -15,6 +15,7 @@ REQUIRED = (
     'references/engineering/00-structural-analysis.md',
     'references/engineering/09-wide-pointerless-compiler.md',
     'references/engineering/10-simd-and-dense-processing.md',
+    'references/engineering/11-pipeline-materialization.md',
     'references/performance-methodology.md',
 )
 # Limits keep the always-loaded router small and stop rule packs becoming routers.
@@ -30,6 +31,7 @@ GENERAL_DECISION_BLOCKS = (
     'references/engineering/06-correctness-boundaries.md',
     'references/engineering/07-measurement-and-review.md',
     'references/engineering/10-simd-and-dense-processing.md',
+    'references/engineering/11-pipeline-materialization.md',
 )
 
 
@@ -245,8 +247,10 @@ def validate(repo):
     if application in documents:
         application_text = documents[application]
         for heading in (
+            '## Analysis revision',
             '## Current topology map',
             '## End-to-end execution and data paths',
+            '## Static work and cardinality ledger',
             '## State, lifetime, and authority map',
             '## Responsibility extraction',
             '## Redesign route portfolio',
@@ -260,6 +264,9 @@ def validate(repo):
             'This is a quality gate against losing semantics, not a preservation gate for the old architecture.',
             'Partition the application by **connected data/state/lifetime changes**, not by files or crates.',
             'Approximate LOC may be reported only after naming files/types to add and delete.',
+            'ANALYSIS REVISION = <immutable revision>',
+            'Do not mix evidence from different revisions into one architecture map.',
+            'Static work counts can justify eliminating avoidable work; they do not prove wall-clock speedup.',
         ):
             if invariant not in application_text:
                 errors.append(f'Application reconstruction missing invariant: {invariant}')
@@ -295,6 +302,10 @@ def validate(repo):
         ):
             if invariant not in broad_text:
                 errors.append(f'Broad redesign missing anti-slop invariant: {invariant}')
+        if 'S11 CLOSED_WORLD_DISPATCH' not in broad_text:
+            errors.append('Broad classifier must include S11 closed-world dispatch')
+        if 'engineering/11-pipeline-materialization.md' not in broad_text:
+            errors.append('Broad redesign must route pipeline materialization signatures')
         if 'engineering/compiler/profile/50-pwp-retained-state.md' not in broad_text:
             errors.append('Broad redesign must integrate the PWP retained-state gate')
         if 'engineering/compiler/25-pwp-512-profile.md' not in broad_text:
@@ -331,6 +342,23 @@ def validate(repo):
         if simd_text.count('## Decision tree:') < 5:
             errors.append('General SIMD block requires five executable decision trees')
 
+
+    pipeline = root / 'references/engineering/11-pipeline-materialization.md'
+    if pipeline in documents:
+        pipeline_text = documents[pipeline]
+        if pipeline_text.count('## Decision tree:') != 5:
+            errors.append('Pipeline materialization requires five executable decision trees')
+        for invariant in (
+            'Per-element boundary work is a batching candidate, not proof that batching is legal.',
+            'If each lookup depends on a write from the prior iteration, keep the ordered path.',
+            'A compiled apply plan must not require ordinary lookups back into the admitted wire object.',
+            'Retain a raw/source reference only when exact bytes, positions, signatures, or audit semantics require it.',
+            'Late materialization requires a consistent version/snapshot across selection and materialization.',
+            'Persist the smallest stable projection required by future consumers.',
+            'Exact audit/replay artifacts are allowed when exact historical representation is itself the contract.',
+        ):
+            if invariant not in pipeline_text:
+                errors.append(f'Pipeline materialization missing invariant: {invariant}')
 
     # Decision ownership: routers classify/delegate; detailed owners must not
     # grow competing trees for the same decision.

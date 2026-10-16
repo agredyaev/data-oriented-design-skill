@@ -13,6 +13,7 @@ Select capabilities by the requested result. Modules are independent instruction
 | Data representation | choose identity, relations, storage | contract, access/mutation pattern, bounds/lifetime | candidate types/trade-offs | [Data shape](engineering/01-data-shape.md), [Canonical state](engineering/02-canonical-and-derived.md) |
 | Ownership | evaluate sharing/synchronization | owners, lifetimes, concurrent access, FFI boundaries | ownership/lock/handle decision | [Ownership](engineering/04-ownership-and-concurrency.md) |
 | Work elimination | remove repeated operations/layers | operations, consumers, frequency, required boundaries | eliminated/merged work and preserved behavior | [Hot-path](engineering/03-hot-path-work.md), [YAGNI](engineering/05-yagni-and-cleanup.md) |
+| Pipeline materialization | batch boundary work, compile apply-ready plans, narrow before wide materialization, shrink persisted intermediates | path bounds, keys, snapshot/order semantics, future consumers | batched/resolved/apply-ready or late-materialized representation | [Pipeline materialization](engineering/11-pipeline-materialization.md) |
 | Performance diagnosis | identify cause before optimization | target, workload, baseline/profile or access to measure | bottleneck/hypothesis/selected rule family | [Diagnosis](performance/00-diagnosis.md) |
 | Experiment | evaluate a cost claim | candidate/hypothesis, baseline, workload, acceptance rule | matched evidence + verdict | [Measurement](performance/01-measurement.md), [Acceptance](performance/10-foundation.md) |
 | Correctness | assess a proposed/implemented change | contract, diff/design, tests/oracle | preserved/violated invariants + missing verification | [Correctness](engineering/06-correctness-boundaries.md) |
@@ -33,6 +34,7 @@ One decision has one detailed owner. Routers may classify and delegate; they mus
 | scoped structural sequence / verification / reporting | [Workflow](workflow.md) |
 | structural pointer→ID, flat children, builder→frozen | [PWP retained state](engineering/compiler/profile/50-pwp-retained-state.md) |
 | canonical authority, store-vs-derive, admit/resolve once | [Canonical and derived](engineering/02-canonical-and-derived.md) |
+| boundary batching, compile-to-apply, late materialization, persisted history projection | [Pipeline materialization](engineering/11-pipeline-materialization.md) |
 | performance typed IDs / flat relations | [Identity rules](performance/20-identity-and-relations.md) and DOD-019 where lookup-in-scan is the cause |
 | AoS/SoA/AoSoA, field width, packing/encoding | [Layout and encoding](performance/21-layout-and-encoding.md) |
 | vector backend, lane independence, gather/scatter, tails | [General SIMD](engineering/10-simd-and-dense-processing.md) |

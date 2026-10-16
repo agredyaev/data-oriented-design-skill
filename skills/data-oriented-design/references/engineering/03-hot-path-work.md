@@ -2,6 +2,8 @@
 
 Use this block when repeated work, copies, allocations, scans, scratch, or caches are the suspected mechanism. A speed claim still requires matched evidence.
 
+If the shape is boundary-call-per-element, source-index/input-back-reference planning, wide-before-select loading, or persisted temporary computation state, route to [Pipeline materialization](11-pipeline-materialization.md) instead of treating it as generic loop tuning.
+
 ## Decision tree: clone/copy/allocation in a repeated path
 
 ```text

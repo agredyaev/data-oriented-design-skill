@@ -33,6 +33,7 @@ Do not classify from names such as `Service`, `Manager`, `Repository`, `Factory`
 | S8 PHASE_LEAKED_STATE | a field/map/buffer is written in one phase and has no read after that phase, or is copied into longer-lived state only for convenience |
 | S9 PASS_FIELD_SPLIT | two recurring passes iterate the same entity collection but read different stable field sets, and no recurring pass requires the whole entity |
 | S10 MODE_RECONSTRUCTION | one generic executor takes mode/boolean switches whose branches recreate distinct operations or invariants |
+| S11 CLOSED_WORLD_DISPATCH | all production implementations are known at build time; no runtime/plugin/ABI implementation loading exists; selection comes from a closed tag/config; callers need behavior selection rather than open extension |
 
 For every match, record exact code locations and the fact satisfying each condition. No evidence → no match. The classifier chooses focused versus broad scope only; **it never grants KEEP status to the matched current mechanism.**
 
@@ -72,6 +73,8 @@ Controller -> IService -> ServiceImpl -> Repository interface
 If inspection proves: one production `IService` implementation (S2), `ServiceImpl::run` only forwards (S1), `DomainModel -> RuntimeModel` is a retained field-copy (S3), and one scheduler is the only writer behind a lock (S7), then S3 and S7 share the same retained state and ownership. Route: **BROAD REDESIGN**.
 
 Counterexample: `HTTP handler -> AuthorizationBoundary -> domain function`. Authorization is a distinct security responsibility, so S1 does not match. Record authorization timing/authority as a required responsibility; the target may still replace the wrapper with a direct boundary function or another simpler carrier.
+
+Closed-world example: `trait LanguagePack` with only build-time-known packs selected by a persisted closed tag matches S11; target candidate is enum/direct dispatch. Do not match S11 when third-party/runtime implementations, ABI plugins, or another genuinely open implementation contract can appear.
 
 ## Required end state
 
@@ -124,6 +127,8 @@ serialization/protocol boundary
 ```
 
 Unknown facts stay `UNKNOWN`. Inspect callers/lifetimes before removal.
+
+When the route contains per-element boundary calls, known keys resolved one by one, source-index/input-back-reference plans, wide-before-select loading, or persisted temporary graphs, use [Pipeline materialization](engineering/11-pipeline-materialization.md).
 
 ## Stage 2 — Synthesize required work with the old architecture erased
 

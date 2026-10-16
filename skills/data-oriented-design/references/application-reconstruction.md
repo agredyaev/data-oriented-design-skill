@@ -4,6 +4,29 @@ Use this block only for broad repository/application redesign. It runs before lo
 
 This is C4-like, not a documentation exercise. Build the map from code, manifests, process entrypoints, dependency edges, protocols, and retained state. The output exists only to drive a new target architecture.
 
+## Analysis revision
+
+Pin the repository before reconstructing architecture:
+
+```text
+ANALYSIS REVISION = <immutable revision>
+```
+
+Use a commit/content hash or another immutable source revision, not a moving branch name.
+
+```text
+Did the branch/head move after evidence was collected?
+  NO -> continue on the pinned revision.
+  YES
+    |
+    |-- Do changed files intersect mapped paths, contracts, state, or route decisions?
+    |     NO -> record the drift; keep the pinned analysis revision.
+    |     YES -> compare the revisions and refresh affected evidence,
+    |            or restart those dependent decisions on a new pinned revision.
+```
+
+Do not mix evidence from different revisions into one architecture map.
+
 ## Current topology map
 
 Start at deployable/process boundaries, then descend only far enough to explain computation and state.
@@ -75,6 +98,27 @@ HTTP bytes
 ```
 
 Overlay data movement on topology. If the same semantic fact is represented as a string, object, DTO, ID, map key, and wire field across one path, show each transition.
+
+## Static work and cardinality ledger
+
+For each externally meaningful path, count bounded work before choosing target passes:
+
+| Stage | Input / bound | Full visits | Boundary ops | Rows/bytes materialized | Allocations/intermediates | Output / bound |
+| --- | --- | --- | --- | --- | --- | --- |
+| admit | request items ≤ N | N | N point reads | N rows | N temporary rows | admitted ≤ N |
+| select | candidates ≤ M | M | 1 read | wide M rows | category vectors | selected ≤ K |
+
+Record exact bounds from contracts/schema when known; otherwise mark them `UNKNOWN`. Record typical counts separately from contractual/worst-case bounds.
+
+Flag these shapes for the [Pipeline materialization](engineering/11-pipeline-materialization.md) owner:
+
+- boundary operation repeated per collection element;
+- keys known before repeated resolution;
+- a wide candidate set narrowed before most fields are consumed;
+- a plan that returns to source input for ordinary values/identity;
+- a temporary computation graph persisted beyond its last direct consumer.
+
+Static work counts can justify eliminating avoidable work; they do not prove wall-clock speedup.
 
 ## State, lifetime, and authority map
 
