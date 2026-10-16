@@ -4,6 +4,62 @@ Use this route for repository/module redesign, especially over-abstracted OOP co
 
 The goal is not cleaner classes. Reconstruct the required computation, synthesize a smaller data-oriented target, implement it directly, delete superseded architecture, then tune measured costs.
 
+## Entry classifier: focused fix or broad redesign
+
+Do not classify from names such as `Service`, `Manager`, `Repository`, `Factory`, `Arc`, or `Mutex`. Match only code-level signatures.
+
+| ID | Match only when all conditions hold |
+| --- | --- |
+| S1 PASS_THROUGH_LAYER | an internal method adds no state transition, validation, boundary, or error translation and only forwards arguments/result to one next internal call |
+| S2 SINGLE_IMPL_INTERFACE | an internal trait/interface has one production implementation and no external plugin, independent oracle, or actual generic requirement |
+| S3 FIELD_COPY_REPRESENTATION | two retained internal types represent the same identity/version; conversion is field-copy or lossless projection; no independent authority/history/boundary requires both |
+| S4 TRANSIENT_INTERMEDIATE | A→B→C; B has no consumer except producing C and adds no validation, authority, wire, ordering, or recovery boundary |
+| S5 REPEATED_IDENTITY_WORK | the same admitted identity/version is parsed, normalized, hashed, or key-looked-up again downstream |
+| S6 ROOT_DOMINATES_OWNERSHIP | one root outlives every consumer, yet retained domain relations use reference counting/pointers; no stable-address or independent-lifetime contract exists |
+| S7 SERIALIZED_SHARED_MUTATION | a lock protects domain state although code proves one executor is the only writer or all writes finish before freeze |
+| S8 PHASE_LEAKED_STATE | a field/map/buffer is written in one phase and has no read after that phase, or is copied into longer-lived state only for convenience |
+| S9 PASS_FIELD_SPLIT | two recurring passes iterate the same entity collection but read different stable field sets, and no recurring pass requires the whole entity |
+| S10 MODE_RECONSTRUCTION | one generic executor takes mode/boolean switches whose branches recreate distinct operations or invariants |
+
+For every match, record exact code locations and the fact satisfying each condition. No evidence → no match.
+
+### Route decision
+
+```text
+Can the selected mechanism be removed/replaced by changing it and direct callers
+WITHOUT:
+  adapter/wrapper between old and new internal forms,
+  duplicate canonical state,
+  synchronization between old and new representations,
+  changing neighboring retained-data ownership/lifetime,
+  or changing two or more adjacent pipeline stages?
+  YES -> focused route.
+  NO  -> BROAD REDESIGN.
+
+Would a proposed local fix add an adapter, duplicate retained state,
+or compatibility service solely to preserve the current internal architecture?
+  YES -> BROAD REDESIGN immediately.
+
+Do two or more matched signatures share the same retained state or adjacent stages,
+so fixing one necessarily changes the other?
+  YES -> BROAD REDESIGN.
+
+Are several matches independent and removable without those effects?
+  YES -> keep them focused; count alone does not justify broad scope.
+```
+
+### Worked classification
+
+```text
+Controller -> IService -> ServiceImpl -> Repository interface
+           -> RepositoryImpl -> DomainModel -> Mapper
+           -> RuntimeModel -> Scheduler
+```
+
+If inspection proves: one production `IService` implementation (S2), `ServiceImpl::run` only forwards (S1), `DomainModel -> RuntimeModel` is a retained field-copy (S3), and one scheduler is the only writer behind a lock (S7), then S3 and S7 share the same retained state and ownership. Route: **BROAD REDESIGN**.
+
+Counterexample: `HTTP handler -> AuthorizationBoundary -> domain function`. Authorization is a distinct security responsibility, so S1 does not match.
+
 ## Required end state
 
 A broad redesign is not complete until all applicable conditions hold:
