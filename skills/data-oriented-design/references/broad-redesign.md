@@ -4,7 +4,20 @@ Use this route for repository/module redesign, especially over-abstracted OOP co
 
 The goal is not cleaner classes. Reconstruct the required computation, synthesize a smaller data-oriented target, implement it directly, delete superseded architecture, then tune measured costs.
 
-## Entry classifier: focused fix or broad redesign
+## Stage 0 — Reconstruct the whole application
+
+For broad repository/application redesign, first use [Whole-application reconstruction](application-reconstruction.md). Build the current topology, end-to-end execution/data paths, state/lifetime/authority map, responsibility ledger, redesign route portfolio, and one global target architecture.
+
+Do this before judging local mechanisms. The current code is evidence of responsibilities, not the target design.
+
+Hard rules:
+
+- **No current mechanism receives KEEP status during reconstruction.**
+- Extract the required responsibility from `Arc`, `Mutex`, traits, services, wrappers, security seams, caches, and DTOs; do not preserve the mechanism by default.
+- Build one global target architecture before implementing any route.
+- Apply the classifier below to each discovered route. It chooses route scope; it does not decide which current mechanisms survive.
+
+## Route classifier: focused fix or broad redesign
 
 Do not classify from names such as `Service`, `Manager`, `Repository`, `Factory`, `Arc`, or `Mutex`. Match only code-level signatures.
 
@@ -21,7 +34,7 @@ Do not classify from names such as `Service`, `Manager`, `Repository`, `Factory`
 | S9 PASS_FIELD_SPLIT | two recurring passes iterate the same entity collection but read different stable field sets, and no recurring pass requires the whole entity |
 | S10 MODE_RECONSTRUCTION | one generic executor takes mode/boolean switches whose branches recreate distinct operations or invariants |
 
-For every match, record exact code locations and the fact satisfying each condition. No evidence → no match.
+For every match, record exact code locations and the fact satisfying each condition. No evidence → no match. The classifier chooses focused versus broad scope only; **it never grants KEEP status to the matched current mechanism.**
 
 ### Route decision
 
@@ -58,7 +71,7 @@ Controller -> IService -> ServiceImpl -> Repository interface
 
 If inspection proves: one production `IService` implementation (S2), `ServiceImpl::run` only forwards (S1), `DomainModel -> RuntimeModel` is a retained field-copy (S3), and one scheduler is the only writer behind a lock (S7), then S3 and S7 share the same retained state and ownership. Route: **BROAD REDESIGN**.
 
-Counterexample: `HTTP handler -> AuthorizationBoundary -> domain function`. Authorization is a distinct security responsibility, so S1 does not match.
+Counterexample: `HTTP handler -> AuthorizationBoundary -> domain function`. Authorization is a distinct security responsibility, so S1 does not match. Record authorization timing/authority as a required responsibility; the target may still replace the wrapper with a direct boundary function or another simpler carrier.
 
 ## Required end state
 
@@ -67,7 +80,7 @@ A broad redesign is not complete until all applicable conditions hold:
 - current input→output computation and retained state are understood;
 - target passes/read-write sets are synthesized without old class boundaries;
 - build-only, canonical retained, derived, and request-local data are separated;
-- every surviving/new abstraction has a current responsibility;
+- every required responsibility has a target carrier; surviving mechanisms are independently re-derived from the target;
 - every retained representation/index has an owner, lifetime, and consumer;
 - superseded internal production paths/state are deleted;
 - no old/new shadow architecture or synchronization bridge remains;
@@ -77,9 +90,9 @@ A broad redesign is not complete until all applicable conditions hold:
 
 Do not stop at `Class -> Row + IDs`. That can be an intermediate step, not the broad result.
 
-## Stage 1 — Reconstruct current system
+## Stage 1 — Reconstruct the selected route
 
-Trace the affected path from external input to required output. Do not infer the real design from class names.
+Use the route selected in Stage 0 and trace it from route input to required output. Do not infer the real design from class names. Whole-application topology is already established; this stage adds route-level concrete types and work.
 
 For each operation record:
 
@@ -205,40 +218,46 @@ struct Runtime {
 
 This layout is selected only when the access matrix supports it.
 
-## Stage 4 — Abstraction veto
+## Stage 4 — Responsibility transfer and abstraction veto
 
-Every new or surviving nontrivial abstraction must pass:
+For every old mechanism, first transfer its required responsibility into the target design. **Preserve the responsibility, not the mechanism.**
 
 ```text
-Does it protect an external/wire/FFI boundary,
-correctness/authority boundary,
-ownership/lifetime boundary,
-required current polymorphism,
-or independent oracle?
-  YES -> KEEP only that responsibility.
-  NO
+What exact requirement would be lost if the old mechanism disappeared?
+  NONE -> DELETE the mechanism.
+  UNKNOWN -> inspect current consumers/authority/lifetime before coding.
+  REQUIRED
     |
-    |-- Can plain data + a direct function express the work?
-    |     YES -> REMOVE/REJECT abstraction.
+    |-- Can the new DOD/PWP ownership/data flow satisfy it with
+    |   plain data, direct functions, typed state, enum dispatch,
+    |   root ownership, partitioning, or a narrower boundary?
+    |     YES -> use the simpler target carrier; DELETE old mechanism.
     |     NO
     |
-    '-- Another concrete current responsibility?
-          UNKNOWN -> inspect consumers.
-          NO -> REMOVE/REJECT.
-          YES -> name it.
+    '-- What is the smallest mechanism required by the TARGET design?
+          choose it from target lifetime/concurrency/boundary facts.
+          Only if that mechanism is structurally the same may the old
+          construct survive.
 ```
+
+Examples:
+
+- `Arc<Mutex<T>>` proves a current sharing/synchronization responsibility, not that target state needs a lock. If target ownership becomes single-writer/root-owned, delete both.
+- a trait with two known backends proves backend selection exists. A closed target can use an enum/direct dispatch; retain dynamic dispatch only for a real open/plugin/runtime requirement.
+- an authorization wrapper proves an authority check must occur at a specific boundary/time. Preserve that invariant; the wrapper type itself has no privilege.
 
 Additional gates:
 
-- One internal implementation behind a trait/interface is rejected unless an external contract, real generic requirement, or independent oracle requires it.
+- One internal implementation behind a trait/interface is rejected unless the target has a real open/plugin/generic or independent-oracle requirement. Multiple known implementations do not by themselves require dynamic dispatch; test closed enum/direct dispatch.
 - A cache/index needs a repeated consumer plus build/update/invalidation/lifetime rules.
 - An adapter used only for old-internal-model ↔ new-internal-model is temporary and cannot survive completion.
 - "clean architecture", testability alone, future backends, consistency, extensibility, or possible reuse are not sufficient.
 - Zero-cost semantic types such as distinct typed IDs are allowed when they enforce a real invariant.
 
-Treat `Service`, `Manager`, `Repository`, `Factory`, `Provider`, `Strategy`, `Context`, `Coordinator`, `Registry`, `Adapter`, `Facade`, `Builder`, `Box<dyn _>`, and `Arc<Mutex<_>>` as review signals, not automatic defects. They must pass the tree.
+Treat `Service`, `Manager`, `Repository`, `Factory`, `Provider`, `Strategy`, `Context`, `Coordinator`, `Registry`, `Adapter`, `Facade`, `Builder`, `Box<dyn _>`, and `Arc<Mutex<_>>` as current-state evidence only. Extract their responsibility, then re-derive the target mechanism from DOD/PWP.
 
 Use [YAGNI and cleanup](engineering/05-yagni-and-cleanup.md) for detail.
+
 
 ## Stage 5 — Anti-slop gate before coding
 
@@ -264,8 +283,11 @@ Before implementation name:
 ADD: exact target data types/functions/passes
 CHANGE: exact callers/boundaries
 DELETE: old types/services/wrappers/state/paths made obsolete
-KEEP: unavoidable boundaries with reason
+RESPONSIBILITIES: invariants/lifetimes/security/concurrency carried into target
+KEEP: only target mechanisms independently re-derived as minimal/required
 ```
+
+Also report current→target mechanism counts and a concrete code-size estimate from named files/types where possible. Performance estimates must name removed work and stay `UNVERIFIED` until measured.
 
 Reject before coding when:
 

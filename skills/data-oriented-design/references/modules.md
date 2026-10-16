@@ -7,7 +7,8 @@ Select capabilities by the requested result. Modules are independent instruction
 | Module | Use for | Minimum inputs | Result | Instructions |
 | --- | --- | --- | --- | --- |
 | Contract | clarify required behavior | task, consumers, external boundaries | required input/output, invariants, bounds, unknowns | [Contract](workflow.md#1-fix-the-contract) |
-| Process/data map | understand transformations/state | affected code or supplied design | typed operations, owners, lifetimes, consumers, known counts | [Mapping](engineering/00-structural-analysis.md) |
+| Application reconstruction | broad repo/app topology and redesign-route discovery | repository/code/deployables | C4-like topology, paths, responsibility ledger, route portfolio, global target | [Whole application](application-reconstruction.md) |
+| Process/data map | understand one route's transformations/state | affected code or supplied design | typed operations, owners, lifetimes, consumers, known counts | [Mapping](engineering/00-structural-analysis.md) |
 | Necessity | decide whether an element should exist | element, contract/consumer, ownership/lifetime | KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH or MEASURE/UNKNOWN | [Element test](workflow.md#3-apply-the-element-necessity-test) |
 | Data representation | choose identity, relations, storage | contract, access/mutation pattern, bounds/lifetime | candidate types/trade-offs | [Data shape](engineering/01-data-shape.md), [Canonical state](engineering/02-canonical-and-derived.md) |
 | Ownership | evaluate sharing/synchronization | owners, lifetimes, concurrent access, FFI boundaries | ownership/lock/handle decision | [Ownership](engineering/04-ownership-and-concurrency.md) |
@@ -27,6 +28,7 @@ One decision has one detailed owner. Routers may classify and delegate; they mus
 
 | Decision | Detailed owner |
 | --- | --- |
+| whole-application topology / route portfolio | [Whole-application reconstruction](application-reconstruction.md) |
 | broad replacement sequence / anti-slop gates | [Broad redesign](broad-redesign.md) |
 | scoped structural sequence / verification / reporting | [Workflow](workflow.md) |
 | structural pointer→ID, flat children, builder→frozen | [PWP retained state](engineering/compiler/profile/50-pwp-retained-state.md) |
@@ -44,7 +46,7 @@ One decision has one detailed owner. Routers may classify and delegate; they mus
 2. Check minimum inputs. Reuse matching evidence; inspect or measure only missing inputs.
 3. Carry results forward with the same scope, version, identity, workload, and units. Recheck only when a dependency changes or validity is uncertain.
 4. An unresolved prerequisite blocks only dependent decisions. Continue independent work and label the affected result `UNKNOWN` or `UNVERIFIED`.
-5. Before changing a mechanism whose necessity is unresolved, apply Necessity. Before a broad redesign, establish the affected typed process/data.
+5. Before changing a mechanism whose necessity is unresolved, apply Necessity. Before broad repo/application redesign, reconstruct the whole application and route portfolio; then establish route-level typed process/data.
 6. Implementation requires affected-behavior verification. A runtime/memory/scaling claim requires Experiment. Analysis-only modules require neither implementation nor benchmark unless their decision depends on measured cost.
 7. Stop when the requested result and applicable gates are satisfied. Use [Workflow reporting](workflow.md#proportional-result-format).
 
@@ -54,7 +56,7 @@ Choose from the question and evidence. Do not run Diagnosis merely because a per
 
 | Situation | Start | Next |
 | --- | --- | --- |
-| broad repo/module redesign or OOP/slop cleanup | [Broad redesign](broad-redesign.md) | current → flat target → abstraction veto → direct replacement → profile/tune |
+| broad repo/module redesign or OOP/slop cleanup | [Broad redesign](broad-redesign.md) | whole-app map → route portfolio → global target → per-route flat redesign → direct replacement → tune |
 | broad compiler/frontend redesign | [Broad redesign](broad-redesign.md) | map required passes first; specialize compiler/512 only when selected |
 | performance target with missing/unreliable profile | Diagnosis | establish baseline/attribution → selected rule family |
 | trusted profile or supplied measured cause | profiler route | rank measured costs → inspect selected path → matching rule/module |

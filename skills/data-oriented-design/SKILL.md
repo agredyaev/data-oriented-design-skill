@@ -17,7 +17,7 @@ Select the smallest route that answers the request. Do not read the whole skill 
 | Trusted profiler hotspot or supplied measured cause | [module composition](references/modules.md) + [performance methodology](references/performance-methodology.md) | the selected rule pack; do not repeat diagnosis only for sequence compliance |
 | Broad repo/module redesign or OOP cleanup | [broad redesign](references/broad-redesign.md) | one detail block only when a gate selects it |
 | Broad compiler/frontend redesign | [broad redesign](references/broad-redesign.md) | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) after required passes are mapped |
-| Cleanup/YAGNI review | [broad classifier](references/broad-redesign.md#entry-classifier-focused-fix-or-broad-redesign) | [YAGNI](references/engineering/05-yagni-and-cleanup.md) only if focused |
+| Cleanup/YAGNI review | [route classifier](references/broad-redesign.md#route-classifier-focused-fix-or-broad-redesign) | [YAGNI](references/engineering/05-yagni-and-cleanup.md) only if focused |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
 
 Requested scope wins. Keep focused work focused. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).

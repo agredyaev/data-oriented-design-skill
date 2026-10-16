@@ -277,5 +277,33 @@ class ValidateSkillTests(unittest.TestCase):
                     'AoS and SoA are BOTH candidates')
         self.assert_invalid('General SIMD must consume identity/layout decisions')
 
+    def test_broad_requires_whole_application_stage_zero(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace('## Stage 0 — Reconstruct the whole application',
+                                     '## Stage 0 — Inspect local smells'))
+        self.assert_invalid('Broad redesign missing executable gate')
+
+    def test_broad_classifier_does_not_preserve_current_mechanism(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace('The classifier chooses focused versus broad scope only',
+                                     'The classifier decides which mechanisms to keep'))
+        self.assert_invalid('Broad redesign missing anti-slop invariant')
+
+    def test_application_reconstruction_requires_responsibility_gate(self):
+        path = self.skill / 'references/application-reconstruction.md'
+        text = path.read_text()
+        path.write_text(text.replace('No current mechanism receives KEEP status during reconstruction.',
+                                     'Keep mechanisms that carry important responsibilities.'))
+        self.assert_invalid('Application reconstruction missing invariant')
+
+    def test_application_reconstruction_requires_route_portfolio(self):
+        path = self.skill / 'references/application-reconstruction.md'
+        text = path.read_text()
+        path.write_text(text.replace('## Redesign route portfolio', '## Local findings'))
+        self.assert_invalid('Application reconstruction missing section')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -10,7 +10,7 @@ from urllib.parse import unquote, urlsplit
 SKILL_PATH = Path('skills/data-oriented-design')
 REQUIRED = (
     'SKILL.md', 'references/workflow.md', 'references/modules.md',
-    'references/broad-redesign.md',
+    'references/broad-redesign.md', 'references/application-reconstruction.md',
     'references/dod-yagni-engineering-rules.md',
     'references/engineering/00-structural-analysis.md',
     'references/engineering/09-wide-pointerless-compiler.md',
@@ -241,14 +241,38 @@ def validate(repo):
         if signature and 'DOD-024' not in signature:
             errors.append('Repeated-pass code signature must route to DOD-024')
 
+    application = root / 'references/application-reconstruction.md'
+    if application in documents:
+        application_text = documents[application]
+        for heading in (
+            '## Current topology map',
+            '## End-to-end execution and data paths',
+            '## State, lifetime, and authority map',
+            '## Responsibility extraction',
+            '## Redesign route portfolio',
+            '## Global target architecture',
+            '## Reconstruction gate',
+        ):
+            if heading not in application_text:
+                errors.append(f'Application reconstruction missing section: {heading}')
+        for invariant in (
+            'No current mechanism receives KEEP status during reconstruction.',
+            'This is a quality gate against losing semantics, not a preservation gate for the old architecture.',
+            'Partition the application by **connected data/state/lifetime changes**, not by files or crates.',
+            'Approximate LOC may be reported only after naming files/types to add and delete.',
+        ):
+            if invariant not in application_text:
+                errors.append(f'Application reconstruction missing invariant: {invariant}')
+
     broad = root / 'references/broad-redesign.md'
     if broad in documents:
         broad_text = documents[broad]
         required_broad = (
-            '## Stage 1 — Reconstruct current system',
+            '## Stage 0 — Reconstruct the whole application',
+            '## Stage 1 — Reconstruct the selected route',
             '## Stage 2 — Synthesize required work with the old architecture erased',
             '## Stage 3 — Build the flat DOD/PWP state',
-            '## Stage 4 — Abstraction veto',
+            '## Stage 4 — Responsibility transfer and abstraction veto',
             '## Stage 5 — Anti-slop gate before coding',
             '## Stage 6 — Implement vertical replacement slices',
             '## Stage 7 — Profile and tune',
@@ -259,6 +283,10 @@ def validate(repo):
             if heading not in broad_text:
                 errors.append(f'Broad redesign missing executable gate: {heading}')
         for invariant in (
+            'No current mechanism receives KEEP status during reconstruction.',
+            'Preserve the responsibility, not the mechanism.',
+            'Build one global target architecture before implementing any route.',
+            'The classifier chooses focused versus broad scope only',
             'Do not stop at `Class -> Row + IDs`',
             'Do not create a shadow architecture beside the old one.',
             'A broad redesign cannot finish with migration adapters, dual state, or two production paths.',
@@ -318,7 +346,7 @@ def validate(repo):
         (line for line in router.splitlines() if 'Cleanup/YAGNI review' in line),
         '',
     )
-    if 'broad-redesign.md#entry-classifier-focused-fix-or-broad-redesign' not in cleanup_row:
+    if 'broad-redesign.md#route-classifier-focused-fix-or-broad-redesign' not in cleanup_row:
         errors.append('Cleanup entry must pass through the broad/focused classifier')
 
     data_shape = documents.get(root / 'references/engineering/01-data-shape.md', '')
