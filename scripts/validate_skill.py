@@ -161,12 +161,22 @@ def validate(repo):
         for rule in sorted(set(re.findall(r'\bDOD-\d{3}\b', text)) - expected):
             errors.append(f'Unknown rule ID in {path.relative_to(root)}: {rule}')
     router = documents[entry]
+    goal = router.find('## Primary goal')
     preflight = router.find('## Mandatory DOD preflight')
+    override = router.find('### Structural-route override')
     routing = router.find('## Choose the task mode')
-    if preflight < 0 or preflight > routing:
-        errors.append('Mandatory DOD preflight must precede route selection')
-    if '### Structural-route override' not in router or 'Do **not** accept YAGNI-only cleanup' not in router:
+    if not (0 <= goal < preflight < override < routing):
+        errors.append('Primary DOD/PWP goal, preflight and structural override must precede task-mode routing')
+    if 'Do **not** accept YAGNI-only cleanup' not in router:
         errors.append('Missing structural route override')
+    structural_row = router.find('| Architecture redesign or structural cleanup with OOP/layer signals |')
+    yagni_row = router.find('| Local YAGNI cleanup **only after structural override check** |')
+    if not (routing < structural_row < yagni_row):
+        errors.append('Structural DOD route must precede local YAGNI in task-mode routing')
+    eng_start = router.find('## Engineering routing')
+    eng_yagni = router.find('| Local wrappers, traits, DTO/DI cleanup **after structural override** |')
+    if eng_start < 0 or eng_yagni < eng_start:
+        errors.append('Engineering YAGNI routing must follow structural override')
     workflow = documents.get(root / 'references/workflow.md', '')
     step_titles = re.findall(r'^## ([1-8])[.] ', workflow, re.M)
     if step_titles != list('12345678') or '## 3. Derive the physical operation shape' not in workflow:

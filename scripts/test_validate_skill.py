@@ -34,13 +34,25 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('## Mandatory DOD preflight',
                                                 '## Optional design advice', 1))
-        self.assert_invalid('Mandatory DOD preflight must precede route selection')
+        self.assert_invalid('Primary DOD/PWP goal, preflight and structural override')
 
     def test_missing_structural_override(self):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('### Structural-route override',
                                                 '### Local cleanup', 1))
-        self.assert_invalid('Missing structural route override')
+        self.assert_invalid('Primary DOD/PWP goal, preflight and structural override')
+
+    def test_yagni_precedes_structural_route(self):
+        path = self.skill / 'SKILL.md'
+        text = path.read_text()
+        first = text.index('| Architecture redesign or structural cleanup with OOP/layer signals |')
+        last = text.index('| Local YAGNI cleanup **only after structural override check** |')
+        lines = text.splitlines(keepends=True)
+        first_idx = next(i for i, line in enumerate(lines) if line.startswith('| Architecture redesign or structural cleanup with OOP/layer signals |'))
+        last_idx = next(i for i, line in enumerate(lines) if line.startswith('| Local YAGNI cleanup **only after structural override check** |'))
+        lines[first_idx], lines[last_idx] = lines[last_idx], lines[first_idx]
+        path.write_text(''.join(lines))
+        self.assert_invalid('Structural DOD route must precede local YAGNI')
 
     def test_physical_step_removed(self):
         path = self.skill / 'references/workflow.md'

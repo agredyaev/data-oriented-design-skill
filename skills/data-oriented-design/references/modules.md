@@ -23,7 +23,7 @@ Select capabilities by the result requested. Modules are independent instruction
 
 ## Composition rules
 
-1. Select the smallest module set that produces the requested result. “Analyze ownership” selects Ownership, not the entire redesign route. Architecture/structural cleanup with OOP/layer signals cannot use standalone YAGNI.
+1. Apply the structural override before selecting modules. Otherwise use the smallest module set that produces the requested result; a focused ownership question does not require full redesign.
 2. Check minimum inputs. Reuse matching code/evidence; inspect or obtain only missing inputs. Do not rerun a module merely to satisfy order.
 3. Carry results forward with the same scope, version, identity, and units. Recheck evidence only when a dependency changes or validity is uncertain.
 4. An unresolved prerequisite blocks only dependent decisions. Continue independent analysis and label the affected result `UNKNOWN` or `UNVERIFIED`.
@@ -33,11 +33,11 @@ Select capabilities by the result requested. Modules are independent instruction
 
 ## Choose and switch routes
 
-Select from the question and available evidence. Structural architecture/cleanup signals override YAGNI-only, not profiler-led diagnosis.
+**Route priority:** for architecture redesign or structural cleanup with OOP/layer signals, derive a minimal operation-first DOD/PWP target before local YAGNI. Apply the structural override before choosing a focused cleanup module. Focused questions and profiler-led diagnosis remain scoped.
 
 | Situation | Start | Next decision |
 | --- | --- | --- |
-| broad redesign or unclear state/ownership | structural route | extract behavior, design target operations/data, compare current mechanisms against it |
+| architecture redesign or structural cleanup with OOP/layer signals | structural route | derive operation/access/layout first; remove or justify old layers against the target |
 | performance target but missing/unreliable profile | performance diagnosis | establish matched baseline and relevant attribution before choosing a transformation |
 | trusted profile identifies target cost | profiler route | rank measured hotspots and iterate the most relevant actionable cause |
 | one focused question or supplied candidate | individual module | consume its minimum inputs and stop with its result |
