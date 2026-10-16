@@ -47,6 +47,16 @@ class ValidateSkillTests(unittest.TestCase):
         path.write_text(path.read_text().replace('**C4 procedure first**', 'optional C4', 1))
         self.assert_invalid('C4 must be first within reference loading cap')
 
+    def test_reviewer_navigation_gate(self):
+        path = self.skill / 'references/engineering/00-structural-analysis.md'
+        path.write_text(path.read_text().replace('### Reviewer navigation gate', '### Diagram appendix', 1))
+        self.assert_invalid('Missing mandatory C4 definition: ### Reviewer navigation gate')
+
+    def test_reviewer_navigation_in_workflow(self):
+        path = self.skill / 'references/workflow.md'
+        path.write_text(path.read_text().replace('reviewer navigation', 'internal diagram', 1))
+        self.assert_invalid('C4 workflow must provide reviewer-facing navigation')
+
     def test_c4_coverage_gate(self):
         path = self.skill / 'references/engineering/00-structural-analysis.md'
         path.write_text(path.read_text().replace('### C4 coverage gate', '### Informal review', 1))

@@ -21,6 +21,12 @@ Before declaring C4 complete, create a concise **coverage ledger** for the inspe
 
 For structural redesign, draw **to-be C4 L2/L3 and affected L4** after deriving operations and physical data. Compare current and target nodes, delegation edges, owned representations and data paths. Every retained or new separate layer requires a necessity proof; renamed old boxes fail.
 
+### Reviewer navigation gate
+
+The same verified C4 must be a **code-review index**, not merely an analyst's inventory. Lead with one readable L2 overview and linked L3 diagrams per container; show the affected L4 separately. Label runtime invocation, DI construction, data ownership/flow and external trust boundaries distinctly. Each important node/edge links to a real entrypoint, composition root, type or function at the inspected commit; annotate structural suspects as `CANDIDATE` without prejudging KEEP/REMOVE.
+
+A reviewer must answer from the diagrams and their source links, without searching the repository: **(1) where does a request enter; (2) where does it go next; (3) who owns the retained data; (4) where are authorization and external boundaries; (5) which component/edge is questioned and what direct code must be inspected?** If any answer requires guessing hidden wiring, improve the relevant L3/L4 diagram before review. Use the existing coverage ledger as the navigation index; **do not create a second competing architecture report** or enlarge unrelated L4 scopes.
+
 ### Example: expose a delegation chain at L3
 
 ```mermaid

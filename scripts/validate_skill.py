@@ -183,7 +183,7 @@ def validate(repo):
     if eng_start < 0 or eng_yagni < eng_start:
         errors.append('Engineering YAGNI routing must follow structural override')
     c4_ref = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
-    for tag in ('## Mandatory C4 as-is preflight', '### C4 coverage gate', '**L1', '**L2', '**L3', '**L4', 'CANDIDATE', 'to-be C4 L2/L3'):
+    for tag in ('## Mandatory C4 as-is preflight', '### C4 coverage gate', '### Reviewer navigation gate', '**L1', '**L2', '**L3', '**L4', 'CANDIDATE', 'to-be C4 L2/L3'):
         if tag not in c4_ref:
             errors.append(f'Missing mandatory C4 definition: {tag}')
     modules = documents.get(root / 'references/modules.md', '')
@@ -194,6 +194,8 @@ def validate(repo):
     workflow = documents.get(root / 'references/workflow.md', '')
     if '## 2. Draw the as-is C4 system and current process/data' not in workflow:
         errors.append('Workflow step 2 must draw C4')
+    if 'reviewer navigation' not in workflow:
+        errors.append('C4 workflow must provide reviewer-facing navigation')
     if 'to-be C4 L2/L3' not in workflow:
         errors.append('Structural redesign must include to-be C4')
     step_titles = re.findall(r'^## ([1-8])[.] ', workflow, re.M)

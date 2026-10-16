@@ -25,7 +25,7 @@ Unknown requirements are `UNKNOWN`. Do not invent them.
 
 ## 2. Draw the as-is C4 system and current process/data
 
-**Before route or design decisions**, render L1 for the whole system, L2 for all runtime units/stores and L3 for each first-party container, including DI/delegation/DTO chains; add affected L4. Pass the [C4 coverage gate](engineering/00-structural-analysis.md#c4-coverage-gate) against entrypoints, composition roots, code locations and inspected commit. Omitted/unverified first-party links mean `C4 INCOMPLETE`, not permission to choose a local path.
+**Before route or design decisions**, render L1 for the whole system, L2 for all runtime units/stores and L3 for each first-party container, including DI/delegation/DTO chains; add affected L4. Pass [C4 coverage](engineering/00-structural-analysis.md#c4-coverage-gate) and [reviewer navigation](engineering/00-structural-analysis.md#reviewer-navigation-gate): readable L2, linked L3, affected L4, ownership/trust edges and source locations. Omitted/unverified first-party links mean `C4 INCOMPLETE`, not permission to choose a local path.
 
 After the complete system map, detail only the affected input-to-output process using a typed table or Mermaid. See [Mapping techniques](engineering/00-structural-analysis.md).
 
