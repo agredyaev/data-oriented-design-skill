@@ -69,7 +69,7 @@ A decision can be structurally supported while a cost claim remains `UNVERIFIED`
 ## Non-negotiable rules
 
 - Establish the affected contract before changing representation, ownership, or boundaries.
-- Broad redesign erases internal architecture; only contracts/invariants carry forward, and target mechanisms are re-derived.
+- Broad redesign erases internal architecture; carry only contracts/invariants. Internal OOP/shared ownership is forbidden.
 - Test mechanism necessity before tuning it. Every added representation needs a named consumer and lifetime.
 - Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
 - Accept performance claims only from matched evidence. After two consecutive local changes on the same representation fail the declared target acceptance rule, revisit the affected structure.

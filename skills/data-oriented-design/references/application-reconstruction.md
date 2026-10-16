@@ -153,6 +153,7 @@ Rules:
 3. Record security, ordering, concurrency, lifetime, recovery, wire, FFI, and independent-oracle responsibilities explicitly.
 4. If the responsibility disappears when the system is redesigned, prove why the underlying contract disappeared; do not silently drop it.
 5. `UNKNOWN` is valid until target ownership/data flow is synthesized.
+6. A target carrier must be concrete data/pass/owner/lifetime/boundary. Do not resolve `UNKNOWN` by choosing another service/trait/shared-owner/lock architecture.
 
 Example:
 
@@ -168,8 +169,8 @@ TARGET QUESTION
 can one scheduler own mutation and publish frozen arrays?
 
 YES -> responsibility preserved; Arc + Mutex deleted.
-NO  -> choose the smallest synchronization mechanism that satisfies the
-       remaining target concurrency model.
+NO  -> redesign ownership/partitioning/message flow again; shared mutable
+       domain ownership is not an allowed broad-target fallback.
 ```
 
 This is a quality gate against losing semantics, not a preservation gate for the old architecture. **Current mechanisms are witnesses, not target candidates.**
@@ -257,7 +258,7 @@ The target must answer:
 - which boundaries serialize;
 - which responsibilities cross boundaries;
 - which routes delete old mechanisms rather than wrap them;
-- which non-default target mechanisms passed an explicit burden-of-proof test.
+- which unavoidable opaque external constraints remain isolated at boundaries.
 
 Prefer subsystem boundaries that match real process/security/lifetime boundaries. Do not preserve a crate/service/interface boundary merely because it exists today.
 
@@ -269,8 +270,9 @@ Do not start route implementation until all hold:
 - every externally meaningful path has a current and target route;
 - every required responsibility has a named target carrier or is explicitly `UNKNOWN`;
 - no current mechanism is marked KEEP merely because it currently carries a required responsibility;
-- every old internal mechanism is a `DELETE CANDIDATE` until a target requirement independently re-derives a mechanism;
-- every non-default target mechanism would still be invented by an implementer who never saw the old internal architecture;
+- every old internal mechanism is a `DELETE CANDIDATE` and cannot return as broad-target architecture;
+- no forbidden internal ownership/OOP mechanism remains in the target;
+- any unavoidable native/OS/FFI/plugin ownership primitive is isolated at an external boundary and does not own domain state;
 - each target canonical state has one authority/owner;
 - route outputs compose into one global target architecture;
 - no route requires a permanent old↔new adapter, dual canonical state, or synchronization bridge;

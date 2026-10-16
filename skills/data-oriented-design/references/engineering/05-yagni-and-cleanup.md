@@ -2,7 +2,7 @@
 
 Use this block to decide whether an abstraction, wrapper, framework, cache, service, registry, or generic layer has a current responsibility.
 
-**Scope:** in focused work a supported result may preserve the existing mechanism. In broad redesign this block returns only the required responsibility/invariant; [Broad redesign](../broad-redesign.md#stage-4--responsibility-transfer-and-abstraction-veto) decides a newly derived target mechanism.
+**Scope:** in focused work a supported result may preserve the existing mechanism. In broad redesign this block returns only the required responsibility/invariant. The broad target must express it with direct data/passes/ownership or an external boundary; it does not re-create an internal service/trait/wrapper mechanism.
 
 ## Decision tree: abstraction necessity
 
@@ -10,7 +10,7 @@ Use this block to decide whether an abstraction, wrapper, framework, cache, serv
 For the layer/trait/wrapper/service, can you name a current responsibility for:
   ownership / lifetime / validation / authorization / transaction /
   compatibility / error translation / required polymorphism?
-  YES -> preserve the responsibility. Focused work may keep the mechanism; broad redesign must re-derive the carrier.
+  YES -> preserve the responsibility. Focused work may keep the mechanism; broad redesign deletes the mechanism and expresses the responsibility in direct target data/passes/boundaries.
   NO
     |
     |-- Is the only reason future extensibility, "clean architecture",
@@ -107,7 +107,7 @@ Add retained cache state only for demonstrated repeated computation, not merely 
 ```text
 Do two similar blocks protect different invariants, authorities, recovery points,
 wire semantics, or an independent test oracle?
-  YES -> preserve both invariants/authorities. Focused work may keep separate mechanisms; broad redesign re-derives their target carriers.
+  YES -> preserve both invariants/authorities. Focused work may keep separate mechanisms; broad redesign expresses them directly in target passes/authorities without preserving the old layers.
   NO
     |
     |-- Is the repeated code a small identical mechanic?
@@ -130,7 +130,7 @@ Do not replace both checks with one early `validate_transaction()?` if authority
 
 ```text
 Does A -> B -> C inside one process cross a real boundary or add required information?
-  YES -> preserve the boundary/information requirement. Focused work may keep the conversion; broad redesign re-derives its minimal target form.
+  YES -> preserve the boundary/information requirement. Focused work may keep the conversion; broad redesign keeps only a real serialization/protocol boundary and removes internal conversion layers.
   NO -> can producer/consumer share one canonical type or narrow projection?
           YES -> REMOVE/MERGE the redundant DTO layer.
           NO -> name the concrete reason before keeping it.
@@ -152,7 +152,7 @@ Candidate inside one process with no real boundary:
 let value = project_required_fields(domain)?;
 ```
 
-Focused work may keep a conversion when a real boundary or invariant requires it. Broad redesign preserves that requirement and re-derives the minimal boundary representation.
+Focused work may keep a conversion when a real boundary or invariant requires it. Broad redesign may serialize only at a real external boundary; internal DTO/conversion chains are deleted.
 
 ## Guardrails
 

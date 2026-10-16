@@ -83,7 +83,7 @@ A broad redesign is not complete until all applicable conditions hold:
 - current input→output computation and retained state are understood;
 - target passes/read-write sets are synthesized without old class boundaries;
 - build-only, canonical retained, derived, and request-local data are separated;
-- every required responsibility has a target carrier; surviving mechanisms are independently re-derived from the target;
+- every required responsibility is carried by explicit target data/passes/ownership or an unchanged external boundary; old internal mechanisms do not survive;
 - every retained representation/index has an owner, lifetime, and consumer;
 - superseded internal production paths/state are deleted;
 - no old/new shadow architecture or synchronization bridge remains;
@@ -153,7 +153,7 @@ concrete data
 + explicit external boundary I/O
 ```
 
-Anything beyond this default must be independently forced by the target requirements, not inherited from the old implementation.
+Internal architecture beyond this default is not an alternative target. If a requirement appears to need shared mutable domain ownership, dynamic-dispatch hierarchy, service/repository indirection, or an internal adapter graph, redesign ownership, phase boundaries, data placement, or dispatch until that need disappears. Only an immutable external protocol/ABI/native constraint may remain at the boundary.
 
 Rules:
 
@@ -235,88 +235,85 @@ struct Runtime {
 
 This layout is selected only when the access matrix supports it.
 
-## Stage 4 — Responsibility transfer and abstraction veto
+## Stage 4 — Responsibility transfer and internal-architecture prohibition
 
-For every old mechanism, first transfer its required responsibility into the target design. **Preserve the responsibility, not the mechanism.**
+For every old mechanism, transfer only the required responsibility into the target design. **Preserve the responsibility, never the internal mechanism.**
 
 ```text
-What exact requirement would be lost if the old mechanism disappeared?
-  NONE -> DELETE the mechanism.
-  UNKNOWN -> inspect current consumers/authority/lifetime before coding.
+What exact externally observable requirement or correctness invariant
+would be lost if the old mechanism disappeared?
+
+  NONE -> DELETE it.
+  UNKNOWN -> inspect consumers/authority/lifetime before coding.
   REQUIRED
     |
-    |-- Can the new DOD/PWP ownership/data flow satisfy it with
-    |   plain data, direct functions, typed state, enum dispatch,
-    |   root ownership, partitioning, or a narrower boundary?
-    |     YES -> use the simpler target carrier; DELETE old mechanism.
-    |     NO
-    |
-    '-- What is the smallest mechanism required by the TARGET design?
-          choose it from target lifetime/concurrency/boundary facts.
-          The target may independently choose the same primitive, but this is a new
-          decision; the old construct itself never receives preservation credit.
+    '-- Re-express that requirement using:
+          concrete data
+          direct passes/functions
+          one explicit owner per mutable state
+          phase-local/build-local scratch
+          immutable/frozen retained state
+          typed IDs/ranges for relations
+          closed direct/enum dispatch
+          explicit external boundary I/O
+
+        If this cannot be done yet:
+          -> redesign ownership / phase split / data placement / work partitioning.
+          -> do NOT fall back to the old internal mechanism family.
 ```
 
-Examples:
+### Forbidden internal target mechanisms
 
-- `Arc<Mutex<T>>` proves a current sharing/synchronization responsibility, not that target state needs a lock. If target ownership becomes single-writer/root-owned, delete both.
-- a trait with two known backends proves backend selection exists. A closed target can use an enum/direct dispatch; retain dynamic dispatch only for a real open/plugin/runtime requirement.
-- an authorization wrapper proves an authority check must occur at a specific boundary/time. Preserve that invariant; the wrapper type itself has no privilege.
-
-### Internal mechanism burden of proof
-
-The following are **rejected by default in a broad target** until a target requirement independently forces them:
+A completed broad target must not contain these as domain/application architecture:
 
 ```text
 Service / Manager / Repository / Provider / Coordinator
-Factory / Facade / Adapter / Context object
-trait/interface or dyn dispatch
-Arc/Rc
-Mutex/RwLock
-pointer/object graph
-registry/event bus
-cache
-DTO/conversion layer
-shared mutable context
+Factory / Facade / internal Adapter / Context object
+internal trait/interface hierarchy or dyn dispatch
+Arc/Rc ownership of domain state
+Mutex/RwLock around domain state
+retained pointer/object graph
+registry/event bus used for internal indirection
+cache used to compensate for inaccessible canonical state
+DTO/conversion chains inside one process
+shared mutable domain context
 ```
 
-For each proposed exception run:
+If any appears necessary, the redesign is **NOT DONE**. Return to Stage 2/3 and change ownership, lifetime, data placement, phase boundaries, or direct caller relationships.
+
+Examples:
+
+- `Arc<Mutex<T>>` reveals a concurrency requirement. Target response: assign mutation to one owner, partition state, or communicate immutable/owned messages. Do not replace it with another shared-mutable domain wrapper.
+- a trait with known implementations reveals behavior selection. Target response: closed enum/direct dispatch or separate concrete passes. Do not preserve internal dynamic dispatch.
+- a repository/service layer reveals persistence/business work. Target response: direct typed boundary functions plus concrete computation passes. Do not recreate the layer under a new name.
+- an authorization wrapper reveals an ordering/authority invariant. Target response: keep the check at the external boundary or direct operation entry; the wrapper object is deleted.
+
+### External boundary exception
+
+An **opaque external constraint** may expose a native/OS/FFI/plugin/wire handle with mandatory ownership or synchronization semantics. Preserve that external contract exactly, but isolate it at the boundary:
 
 ```text
-Would this mechanism still be invented if the implementer knew only:
-  external contracts
-  required invariants
-  target passes
-  target ownership/lifetimes
-  measured performance constraints
-and had never seen the old implementation?
-
-  NO / UNCLEAR -> REJECT.
-  YES
-    |
-    |-- Name the requirement that makes plain data + direct passes insufficient.
-    |     NONE / "clean architecture" / future flexibility -> REJECT.
-    |     NAMED REQUIREMENT
-    |
-    |-- Can ownership, lifetime, data placement, phase boundary,
-    |   closed dispatch, or direct caller relationships remove the need?
-          YES -> REJECT the extra mechanism.
-          NO  -> allow only the smallest target mechanism satisfying it.
+external opaque handle/protocol
+        |
+        v
+thin boundary function
+        |
+        v
+owned DOD/PWP data
 ```
 
-A rationale of "the old system had X", "this layer is conventional", or "it improves abstraction/testability" fails the gate.
+The exception does not permit `Arc<Mutex<DomainState>>`, internal service hierarchies, or dyn-dispatch architecture. If the external API itself returns a reference-counted/native handle, that handle remains boundary data; it must not determine internal domain ownership.
+
+A rationale of "the old system had X", "this layer is conventional", "testability", "clean architecture", or "future flexibility" fails the gate.
 
 Additional gates:
 
-- One internal implementation behind a trait/interface is rejected unless the target has a real open/plugin/generic or independent-oracle requirement. Multiple known implementations do not by themselves require dynamic dispatch; test closed enum/direct dispatch.
-- A cache/index needs a repeated consumer plus build/update/invalidation/lifetime rules.
+- Internal trait/interface hierarchies and dyn dispatch are not broad-target architecture. Closed implementations use direct/enum dispatch. A true external plugin/ABI contract remains only at the boundary and must not shape internal domain ownership.
+- A cache/index needs a repeated consumer plus build/update/invalidation/lifetime rules and must not compensate for inaccessible canonical state.
 - An adapter used only for old-internal-model ↔ new-internal-model is temporary and cannot survive completion.
-- "clean architecture", testability alone, future backends, consistency, extensibility, or possible reuse are not sufficient.
 - Zero-cost semantic types such as distinct typed IDs are allowed when they enforce a real invariant.
 
-Treat `Service`, `Manager`, `Repository`, `Factory`, `Provider`, `Strategy`, `Context`, `Coordinator`, `Registry`, `Adapter`, `Facade`, `Builder`, `Box<dyn _>`, and `Arc<Mutex<_>>` as current-state evidence only. Extract their responsibility, then re-derive the target mechanism from DOD/PWP.
-
-Use [YAGNI and cleanup](engineering/05-yagni-and-cleanup.md) for detail.
+Use [YAGNI and cleanup](engineering/05-yagni-and-cleanup.md) only to extract responsibilities; broad-target mechanism policy is defined here.
 
 
 ## Stage 5 — Anti-slop gate before coding
@@ -344,7 +341,7 @@ ADD: exact target data types/functions/passes
 CHANGE: exact callers/boundaries
 DELETE: old types/services/wrappers/state/paths made obsolete
 RESPONSIBILITIES: invariants/lifetimes/security/concurrency carried into target
-TARGET EXCEPTIONS: non-default mechanisms independently re-derived from target requirements, with proof
+EXTERNAL EXCEPTIONS: only unavoidable protocol/ABI/native constraints isolated at the boundary
 ```
 
 Also report current→target mechanism counts and a concrete code-size estimate from named files/types where possible. Performance estimates must name removed work and stay `UNVERIFIED` until measured.
@@ -357,7 +354,7 @@ Reject before coding when:
 - permanent synchronization between old/new models is required;
 - no obsolete mechanisms can be named for deletion;
 - increased architectural mechanisms lack contract requirement or measured cause;
-- any internal abstraction/shared-ownership/dynamic-dispatch mechanism appears without passing the target-side burden-of-proof gate.
+- any forbidden internal target mechanism remains anywhere in the application/domain architecture.
 
 Line count is not the sole metric, but a broad redesign that mostly adds production code without deleting obsolete mechanisms has failed this gate.
 
@@ -437,7 +434,7 @@ After a 512 change, verify parity, measure the predicted local metric, then reme
 Return `NOT DONE` when any applicable item fails:
 
 - target passes/storage are still organized around old classes without access justification;
-- a non-default target mechanism lacks a named target requirement and burden-of-proof result;
+- a forbidden internal target mechanism remains;
 - duplicate old/new canonical state remains;
 - an internal migration adapter/shadow production path remains;
 - build-only state survives without a runtime consumer;
@@ -455,7 +452,7 @@ Report only:
 
 1. **Current** — typed pipeline, retained-state/mechanism inventory, measured costs if available.
 2. **Target** — exact passes, access matrix, flat state, unavoidable boundaries.
-3. **Delete / Target exceptions** — obsolete mechanisms; only newly re-derived non-default target mechanisms with the requirement that forced them.
+3. **Delete / External exceptions** — obsolete internal mechanisms; only unavoidable protocol/ABI/native constraints isolated at external boundaries.
 4. **Implementation delta** — direct slices/tests; no shadow architecture.
 5. **Performance** — baseline/profile, causal changes, matched results; 512 decision when applicable.
 6. **Unknowns** — only facts blocking a decision.

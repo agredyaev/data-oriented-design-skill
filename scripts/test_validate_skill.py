@@ -404,7 +404,7 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'references/engineering/04-ownership-and-concurrency.md'
         text = path.read_text()
         path.write_text(text.replace(
-            'Broad redesign re-derives the synchronization mechanism from the target concurrency model.',
+            'Broad redesign must move the mutable authority to one owner, partition it, or exchange owned messages; an internal domain lock means the redesign is incomplete.',
             'Broad redesign keeps the existing lock.',
         ))
         self.assert_invalid('Ownership block missing focused/broad scope rule')
@@ -413,10 +413,38 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'references/engineering/05-yagni-and-cleanup.md'
         text = path.read_text()
         path.write_text(text.replace(
-            'Broad redesign preserves that requirement and re-derives the minimal boundary representation.',
+            'Broad redesign may serialize only at a real external boundary; internal DTO/conversion chains are deleted.',
             'Broad redesign keeps the conversion.',
         ))
         self.assert_invalid('YAGNI conversion guidance must distinguish focused keep from broad re-derivation')
+
+
+    def test_broad_cannot_fallback_to_rederived_mutex(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'shared mutable domain ownership is not an allowed broad-target fallback.',
+            'choose the smallest target synchronization/ownership mechanism.',
+        ))
+        self.assert_invalid('Broad redesign missing anti-slop invariant')
+
+    def test_broad_forbids_internal_target_mechanisms(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'A completed broad target must not contain these as domain/application architecture:',
+            'These mechanisms may be used when justified:',
+        ))
+        self.assert_invalid('Broad redesign missing anti-slop invariant')
+
+    def test_application_cannot_resolve_unknown_with_shared_owner(self):
+        path = self.skill / 'references/application-reconstruction.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'A target carrier must be concrete data/pass/owner/lifetime/boundary.',
+            'A target carrier may be a service or shared owner.',
+        ))
+        self.assert_invalid('Application reconstruction missing invariant')
 
 if __name__ == '__main__':
     unittest.main()

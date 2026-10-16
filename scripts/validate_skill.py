@@ -267,6 +267,8 @@ def validate(repo):
             'ANALYSIS REVISION = <immutable revision>',
             'Do not mix evidence from different revisions into one architecture map.',
             'Static work counts can justify eliminating avoidable work; they do not prove wall-clock speedup.',
+            'A target carrier must be concrete data/pass/owner/lifetime/boundary.',
+            'shared mutable domain ownership is not an allowed broad-target fallback.',
         ):
             if invariant not in application_text:
                 errors.append(f'Application reconstruction missing invariant: {invariant}')
@@ -279,7 +281,7 @@ def validate(repo):
             '## Stage 1 — Reconstruct the selected route',
             '## Stage 2 — Synthesize required work with the old architecture erased',
             '## Stage 3 — Build the flat DOD/PWP state',
-            '## Stage 4 — Responsibility transfer and abstraction veto',
+            '## Stage 4 — Responsibility transfer and internal-architecture prohibition',
             '## Stage 5 — Anti-slop gate before coding',
             '## Stage 6 — Implement vertical replacement slices',
             '## Stage 7 — Profile and tune',
@@ -291,7 +293,9 @@ def validate(repo):
                 errors.append(f'Broad redesign missing executable gate: {heading}')
         for invariant in (
             'No current mechanism receives KEEP status during reconstruction.',
-            'Preserve the responsibility, not the mechanism.',
+            'Preserve the responsibility, never the internal mechanism.',
+            'A completed broad target must not contain these as domain/application architecture:',
+            'shared mutable domain ownership is not an allowed broad-target fallback.',
             'Build one global target architecture before implementing any route.',
             'The classifier chooses focused versus broad scope only',
             'Do not stop at `Class -> Row + IDs`',
@@ -308,7 +312,9 @@ def validate(repo):
             errors.append('Broad redesign must route pipeline materialization signatures')
         for forbidden in (
             '**Delete / Keep**',
+            '**Delete / Target exceptions**',
             'surviving/new abstraction lacks a named current responsibility',
+            'smallest target synchronization/ownership mechanism',
         ):
             if forbidden in broad_text:
                 errors.append(f'Broad redesign contains stale preservation wording: {forbidden}')
@@ -408,15 +414,15 @@ def validate(repo):
     ownership_text = documents.get(root / 'references/engineering/04-ownership-and-concurrency.md', '')
     for required in (
         'Focused work may keep a lock',
-        'Broad redesign re-derives the synchronization mechanism',
-        'Broad redesign preserves the foreign handle contract and re-derives the surrounding ownership',
+        'Broad redesign must move the mutable authority to one owner',
+        'Broad redesign may keep that opaque native handle only at the boundary',
     ):
         if required not in ownership_text:
             errors.append(f'Ownership block missing focused/broad scope rule: {required}')
 
     yagni_text = documents.get(root / 'references/engineering/05-yagni-and-cleanup.md', '')
-    if 'Broad redesign preserves that requirement and re-derives the minimal boundary representation.' not in yagni_text:
-        errors.append('YAGNI conversion guidance must distinguish focused keep from broad re-derivation')
+    if 'Broad redesign may serialize only at a real external boundary; internal DTO/conversion chains are deleted.' not in yagni_text:
+        errors.append('YAGNI conversion guidance must distinguish focused keep from broad internal-layer deletion')
 
     structural_text = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
     for invariant in (

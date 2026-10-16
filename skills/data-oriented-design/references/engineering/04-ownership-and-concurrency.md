@@ -2,7 +2,7 @@
 
 Use this block to decide whether sharing, reference counting, stable addresses, or synchronization have a concrete responsibility. `Arc`, `Mutex`, references, and pointers are mechanisms, not automatic defects.
 
-**Scope:** in focused work this block may preserve an existing mechanism. In broad redesign it returns only the lifetime/concurrency/FFI requirement; [Broad redesign](../broad-redesign.md#stage-4--responsibility-transfer-and-abstraction-veto) must re-derive the target mechanism from scratch.
+**Scope:** in focused work this block may preserve an existing mechanism. In broad redesign it returns only the lifetime/concurrency/FFI requirement. The broad route must eliminate shared internal ownership/synchronization by changing topology; only mandatory opaque foreign/native ownership may remain isolated at the external boundary.
 
 ## Decision tree: shared ownership
 
@@ -12,7 +12,7 @@ Is the value retained beyond one local operation?
   YES
     |
     |-- Does an FFI/ABI/native API require a stable pointer or reference-counted handle?
-    |     YES -> focused: KEEP that handle; broad: record the stable-handle requirement and re-derive the target carrier.
+    |     YES -> focused: KEEP that handle; broad: isolate the mandatory foreign handle at the external boundary and keep domain state separately owned.
     |     NO
     |
     |-- Do multiple owners genuinely outlive one common root owner?
@@ -40,7 +40,7 @@ struct Engine {
 fn execute(engine: &Engine, request: &Request) -> Result<Response> { ... }
 ```
 
-Focused work may keep `Arc<Manifest>` when spawned tasks genuinely need independently cloned ownership. Broad redesign records that lifetime requirement and re-derives the target ownership.
+Focused work may keep `Arc<Manifest>` when spawned tasks genuinely need independently cloned ownership. Broad redesign must instead assign domain state to one owner or transfer owned/immutable data between tasks; shared domain ownership is not a target option.
 
 ## Decision tree: `Mutex` / shared mutation
 
@@ -51,12 +51,12 @@ Is the protected state mutated concurrently by multiple execution contexts?
   YES
     |
     |-- Is it one real shared resource whose invariant spans those writers?
-    |     YES -> synchronization semantics are required; focused may KEEP, broad must choose the smallest target synchronization/ownership mechanism.
+    |     YES -> focused may KEEP synchronization; broad must redesign to one owner/partition/message transfer. A lock around domain state is not a broad-target option.
     |     NO
     |
     |-- Can mutable ownership be partitioned/localized without changing semantics?
           YES -> TEST local ownership/sharding; include merge/order costs.
-          NO -> focused may KEEP; broad re-derives the smallest synchronization design that preserves the invariant.
+          NO -> focused may KEEP; broad route is not complete until topology removes shared mutable domain ownership.
 ```
 
 ### Example: `Arc<Mutex<Model>>`
@@ -82,7 +82,7 @@ fn update(rt: &mut Runtime, id: ModelId) {
 }
 ```
 
-Focused work may keep a lock when independent threads truly mutate the same contractual resource. Broad redesign re-derives the synchronization mechanism from the target concurrency model.
+Focused work may keep a lock when independent threads truly mutate the same contractual resource. Broad redesign must move the mutable authority to one owner, partition it, or exchange owned messages; an internal domain lock means the redesign is incomplete.
 
 ## Pointer-topology handoff
 
@@ -104,7 +104,7 @@ struct NativeCancellation {
 }
 ```
 
-Focused work may keep this when the native API requires a cloneable cross-thread handle. Broad redesign preserves the foreign handle contract and re-derives the surrounding ownership; do not rewrite the foreign contract merely for pointer-free aesthetics.
+Focused work may keep this when the native API requires a cloneable cross-thread handle. Broad redesign may keep that opaque native handle only at the boundary; surrounding domain state must remain singly owned/phase owned. Do not project the foreign ownership model into domain architecture.
 
 ## Guardrails
 
