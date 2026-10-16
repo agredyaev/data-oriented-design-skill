@@ -423,7 +423,7 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'references/broad-redesign.md'
         text = path.read_text()
         path.write_text(text.replace(
-            'shared mutable domain ownership is not an allowed broad-target fallback.',
+            'Shared mutable domain ownership is not an allowed broad-target fallback.',
             'choose the smallest target synchronization/ownership mechanism.',
         ))
         self.assert_invalid('Broad redesign missing anti-slop invariant')

@@ -268,7 +268,7 @@ def validate(repo):
             'Do not mix evidence from different revisions into one architecture map.',
             'Static work counts can justify eliminating avoidable work; they do not prove wall-clock speedup.',
             'A target carrier must be concrete data/pass/owner/lifetime/boundary.',
-            'shared mutable domain ownership is not an allowed broad-target fallback.',
+            'Shared mutable domain ownership is not an allowed broad-target fallback.',
         ):
             if invariant not in application_text:
                 errors.append(f'Application reconstruction missing invariant: {invariant}')
@@ -295,7 +295,7 @@ def validate(repo):
             'No current mechanism receives KEEP status during reconstruction.',
             'Preserve the responsibility, never the internal mechanism.',
             'A completed broad target must not contain these as domain/application architecture:',
-            'shared mutable domain ownership is not an allowed broad-target fallback.',
+            'Shared mutable domain ownership is not an allowed broad-target fallback.',
             'Build one global target architecture before implementing any route.',
             'The classifier chooses focused versus broad scope only',
             'Do not stop at `Class -> Row + IDs`',
