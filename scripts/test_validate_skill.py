@@ -99,10 +99,10 @@ class ValidateSkillTests(unittest.TestCase):
     def test_yagni_precedes_structural_route(self):
         path = self.skill / 'SKILL.md'
         text = path.read_text()
-        first = text.index('| Architecture redesign or structural cleanup with OOP/layer signals |')
+        first = text.index('| Architecture redesign or scoped change touching C4 structural candidates |')
         last = text.index('| Local YAGNI cleanup **only after structural override check** |')
         lines = text.splitlines(keepends=True)
-        first_idx = next(i for i, line in enumerate(lines) if line.startswith('| Architecture redesign or structural cleanup with OOP/layer signals |'))
+        first_idx = next(i for i, line in enumerate(lines) if line.startswith('| Architecture redesign or scoped change touching C4 structural candidates |'))
         last_idx = next(i for i, line in enumerate(lines) if line.startswith('| Local YAGNI cleanup **only after structural override check** |'))
         lines[first_idx], lines[last_idx] = lines[last_idx], lines[first_idx]
         path.write_text(''.join(lines))
