@@ -289,7 +289,7 @@ def validate(repo):
     if simd in documents:
         simd_text = documents[simd]
         for invariant in (
-            'A **dense ordinal** is an internal slot in a bounded contiguous domain',
+            'A **dense ordinal** is an internal slot in bounded `[0,N)`',
             'Do not allocate an array by max external ID.',
             'SIMD does not imply a 512-byte logical batch.',
             'Scatter needs an additional correctness check',
@@ -302,6 +302,62 @@ def validate(repo):
             errors.append('General SIMD block missing dense-ID to SIMD route')
         if simd_text.count('## Decision tree:') < 5:
             errors.append('General SIMD block requires five executable decision trees')
+
+
+    # Decision ownership: routers classify/delegate; detailed owners must not
+    # grow competing trees for the same decision.
+    modules = documents.get(root / 'references/modules.md', '')
+    if '## Decision ownership' not in modules:
+        errors.append('Module composition must declare decision ownership')
+
+    fallback = documents.get(root / 'references/dod-yagni-engineering-rules.md', '')
+    if 'use [Broad redesign](broad-redesign.md)' not in fallback:
+        errors.append('Fallback index must route broad redesign to the dedicated owner')
+
+    cleanup_row = next(
+        (line for line in router.splitlines() if 'Cleanup/YAGNI review' in line),
+        '',
+    )
+    if 'broad-redesign.md#entry-classifier-focused-fix-or-broad-redesign' not in cleanup_row:
+        errors.append('Cleanup entry must pass through the broad/focused classifier')
+
+    data_shape = documents.get(root / 'references/engineering/01-data-shape.md', '')
+    if not data_shape.startswith('# Data Shape Router'):
+        errors.append('Data shape must remain a routing block, not a duplicate rule owner')
+    if data_shape.count('## Decision tree:') != 1:
+        errors.append('Data shape router must have exactly one classification tree')
+
+    pointerless = documents.get(root / 'references/engineering/compiler/30-pointerless-state.md', '')
+    if not pointerless.startswith('# Pointerless Compiler State Router'):
+        errors.append('Compiler pointerless state must remain a router')
+    if pointerless.count('## Decision tree') != 1:
+        errors.append('Compiler pointerless router must have exactly one classification tree')
+
+    pwp_text = documents.get(
+        root / 'references/engineering/compiler/profile/50-pwp-retained-state.md', '')
+    if '## Decision tree: store or derive a field' in pwp_text:
+        errors.append('PWP retained state must delegate store-vs-derive to canonical owner')
+    if '## Derived-field handoff' not in pwp_text:
+        errors.append('PWP retained state missing canonical store-vs-derive handoff')
+
+    simd_text = documents.get(root / 'references/engineering/10-simd-and-dense-processing.md', '')
+    for forbidden in (
+        'AoS and SoA are BOTH candidates',
+        'Can admission/build map each live internal entity to a bounded slot',
+    ):
+        if forbidden in simd_text:
+            errors.append(
+                f'General SIMD must consume identity/layout decisions, not own them: {forbidden}')
+    if 'route to DOD-006/layout-and-encoding' not in simd_text:
+        errors.append('General SIMD must delegate layout selection to DOD-006')
+    if 'route to DOD-005/DOD-008' not in simd_text:
+        errors.append('General SIMD must delegate identity selection')
+
+    wide = documents.get(root / 'references/engineering/compiler/20-wide-frontend.md', '')
+    if 'For a non-512 vector backend, use [General SIMD]' not in wide:
+        errors.append('Wide frontend must delegate non-512 vector backend to General SIMD')
+    if 'explicit logical 512-byte contract' not in wide:
+        errors.append('Wide frontend must distinguish explicit 512 mechanics')
 
     compiler_router = root / 'references/engineering/09-wide-pointerless-compiler.md'
     if compiler_router in graph:
