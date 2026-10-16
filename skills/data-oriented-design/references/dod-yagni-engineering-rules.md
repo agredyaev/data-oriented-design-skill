@@ -65,4 +65,4 @@ This order does not authorize removal. Every branch must still preserve required
 - Correctness boundaries override cleanup.
 - Structural simplification can be accepted from code + behavior evidence. Runtime/memory/scaling claims require the matching evidence.
 
-For broad redesigns, use [Workflow](workflow.md) and [Structural analysis](engineering/00-structural-analysis.md). For profiler-led work, use [Module composition](modules.md#choose-and-switch-routes) and [Performance methodology](performance-methodology.md).
+For broad redesigns, use [Broad redesign](broad-redesign.md); it selects structural detail blocks as needed. For profiler-led work, use [Module composition](modules.md#choose-and-switch-routes) and [Performance methodology](performance-methodology.md).

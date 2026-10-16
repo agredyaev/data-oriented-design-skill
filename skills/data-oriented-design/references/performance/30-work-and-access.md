@@ -55,14 +55,18 @@ Does a sequential scan perform one random lookup per row?
       |      |-- NO -> Keep the lookup.
       |      '-- YES
       |
-      '-- Can build align companion data by row ID?
-             |-- NO -> Use a stable dense ID.
-             '-- YES -> Scan the companion array directly.
+      |-- Can build align companion data by the scan's row/dense slot?
+      |      |-- YES -> Scan the companion array directly.
+      |      '-- NO
+      |
+      '-- Can the iterated identity be resolved once to a bounded slot used by companion storage?
+             |-- YES -> Test one-time remap + direct indexed scan.
+             '-- NO -> Keep the lookup or route reorderable random access to DOD-026.
 ```
 
 ### DOD-019 — Remove random lookup from a sequential scan
 - **Symptom:** A pass over `N` rows performs a map lookup or pointer chase for every row to fetch stable companion data.
-- **Action:** Resolve companions into parallel arrays or stable dense IDs during build, then scan them by index. Keep the map for queries that ask for arbitrary keys.
+- **Action:** Prefer companion arrays aligned to the scan slot. If current identities are not slots, resolve/remap them once to a bounded dense slot only when companion storage can use that same slot. Dense IDs alone do not remove a lookup. Keep the map for arbitrary-key queries; use DOD-026 when reorderable access remains random.
 - **Check:** Measure lookup count and the extra bytes/update work; verify companion arrays stay aligned after insert, delete, and reorder.
 - **Example:** Replace `N` string-key lookups per ranking pass with `N` indexed reads from a parallel weight array.
 

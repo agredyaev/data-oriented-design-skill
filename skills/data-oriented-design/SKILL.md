@@ -17,7 +17,7 @@ Select the smallest route that answers the request. Do not read the whole skill 
 | Trusted profiler hotspot or supplied measured cause | [module composition](references/modules.md) + [performance methodology](references/performance-methodology.md) | the selected rule pack; do not repeat diagnosis only for sequence compliance |
 | Broad repo/module redesign or OOP cleanup | [broad redesign](references/broad-redesign.md) | one detail block only when a gate selects it |
 | Broad compiler/frontend redesign | [broad redesign](references/broad-redesign.md) | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) after required passes are mapped |
-| Cleanup/YAGNI review | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow only when code will change |
+| Cleanup/YAGNI review | [broad classifier](references/broad-redesign.md#entry-classifier-focused-fix-or-broad-redesign) | [YAGNI](references/engineering/05-yagni-and-cleanup.md) only if focused |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
 
 Requested scope wins. Keep focused work focused. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
@@ -36,7 +36,7 @@ Start with at most three references after this router. Load another only for a m
 | Authorization, transactions, claims/leases/fences, migrations, recovery, wire checks | [Correctness boundaries](references/engineering/06-correctness-boundaries.md) |
 | Evidence needed to accept a structural, memory, phase, or end-to-end claim | [Measurement and review](references/engineering/07-measurement-and-review.md) |
 | Concrete Rust transformation | [Examples](references/engineering/08-examples.md) |
-| PWP retained ownership, flattening, derived fields, builder lifetime | [PWP decisions](references/engineering/compiler/profile/50-pwp-retained-state.md) |
+| PWP retained ownership, flattening, builder lifetime | [PWP decisions](references/engineering/compiler/profile/50-pwp-retained-state.md) |
 | Dense IDs, direct indexing, SIMD, gather/scatter, vector tails | [General SIMD](references/engineering/10-simd-and-dense-processing.md) |
 | 512-byte lexical masks/compaction/lookup | [512 profile](references/engineering/compiler/25-pwp-512-profile.md) |
 | Compiler/tokenizer/parser/IR | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) |

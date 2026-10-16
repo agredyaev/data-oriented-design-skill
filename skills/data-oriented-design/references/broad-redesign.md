@@ -175,7 +175,7 @@ Derive layout from the pass/access matrix:
 - repeated identity parse/normalize → admit/resolve once and propagate typed identity;
 - shared mutable state → localize/partition unless a real concurrent invariant requires it.
 
-Use [PWP retained-state decisions](engineering/compiler/profile/50-pwp-retained-state.md) when ownership/lifetime/derived-state details decide the branch. Use [Data shape](engineering/01-data-shape.md) for AoS/SoA/relations. When a pass has dense slots/direct indexing or a measured vector candidate, use [General SIMD](engineering/10-simd-and-dense-processing.md).
+Use [PWP retained-state decisions](engineering/compiler/profile/50-pwp-retained-state.md) for pointer/child/builder lifetime decisions, [Canonical and derived](engineering/02-canonical-and-derived.md) for store/derive authority, and [Data shape](engineering/01-data-shape.md) to route layout questions. Use [General SIMD](engineering/10-simd-and-dense-processing.md) only after identity/layout are selected and a non-512 vector candidate remains.
 
 ### Reject pointerless OOP
 
@@ -312,7 +312,7 @@ reduce data touched / improve layout
 improve locality/access order
 remove allocation/copy churn
 reduce branch/classification cost
-batch/vectorize via the [General SIMD](engineering/10-simd-and-dense-processing.md) gate
+batch/vectorize non-lexical work via [General SIMD](engineering/10-simd-and-dense-processing.md); byte/lexical work continues to Stage 8
 partition concurrency
 ```
 

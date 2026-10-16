@@ -82,41 +82,9 @@ fn update(rt: &mut Runtime, id: ModelId) {
 
 Keep a lock when independent threads truly mutate the same contractual resource.
 
-## Decision tree: pointer graph versus typed identity
+## Pointer-topology handoff
 
-```text
-Does a long-lived relationship encode domain topology through object pointers?
-  NO -> no pointer-graph finding.
-  YES
-    |
-    |-- Is stable address identity observable/contractual?
-    |     YES -> KEEP it.
-    |     NO
-    |
-    |-- Can one owner preserve every target lifetime?
-          NO -> preserve independent ownership.
-          YES -> TEST typed IDs/offsets/ranges with bounds/stale-ID checks.
-```
-
-### Example: frozen graph
-
-Before:
-
-```rust
-struct Node {
-    edges: Vec<Arc<Node>>,
-}
-```
-
-Candidate for one snapshot-owned graph:
-
-```rust
-struct NodeId(u32);
-struct Node { edges: Range<u32> }
-struct Graph { nodes: Vec<Node>, edge_ids: Vec<NodeId> }
-```
-
-A plugin retaining a node after snapshot destruction cannot use a naked snapshot index without another lifetime protocol.
+A long-lived domain pointer graph whose question is "pointer or typed ID/range?" belongs to [PWP retained-state decisions](compiler/profile/50-pwp-retained-state.md). This block owns whether shared ownership, locking, or a foreign/native handle is required; it does not repeat the pointer-topology decision.
 
 ## Decision tree: foreign/native handle
 

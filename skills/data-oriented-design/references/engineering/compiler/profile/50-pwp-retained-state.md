@@ -92,53 +92,9 @@ struct Relations {
 
 For `[[A,B],[],[C]]`, store `child_ids=[A,B,C]` and `child_offsets=[0,2,2,3]`. Appending `D` to parent 0 is not O(1) in this frozen layout; retain another representation if that operation is contractual.
 
-## Decision tree: store or derive a field
+## Derived-field handoff
 
-```text
-Is the field authoritative or independently historical/snapshot state?
-  YES -> KEEP it.
-Is there an exact deterministic derivation from retained canonical inputs?
-  NO -> KEEP it.
-Will every input survive until the last read, with the required version?
-  NO -> KEEP the field or preserve its inputs/version explicitly.
-Is the field read in a hot/repeated path or constrained by an explicit read-cost budget?
-  NO -> candidate: DERIVE at use; make no speed claim.
-  YES -> does existing evidence/bound show derivation fits that budget?
-          NO -> KEEP the field.
-          UNKNOWN -> MEASURE the trade-off.
-          YES -> candidate: DERIVE at use.
-Would removal eliminate invalidation/update/synchronization work?
-  YES -> include those removed costs when comparing the candidate.
-```
-
-### Example: end position versus historical value
-
-Before:
-
-```rust
-struct Token {
-    start: u32,
-    length: u16,
-    end: u32,
-}
-```
-
-Candidate when `end` is not a hot/repeated read and `start + length` is checked:
-
-```rust
-struct Token {
-    start: u32,
-    length: u16,
-}
-
-fn end(token: &Token) -> u32 {
-    token.start + u32::from(token.length)
-}
-```
-
-This is a structural simplification; it is not a speed claim. If `end` is read in a hot loop under a latency budget, measure that trade-off first.
-
-Counterexample: a historical price is not derived from the current price. Keep it even when the values happen to match today.
+Store-vs-derive and canonical-authority decisions are owned by [Canonical and derived data](../../02-canonical-and-derived.md). Do not repeat that tree here. After it selects the retained fields, return here only if pointer/child/builder lifetime remains unresolved.
 
 ## Decision tree: builder, frozen state, and scratch lifetime
 

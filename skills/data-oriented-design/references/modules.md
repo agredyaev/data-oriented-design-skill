@@ -16,10 +16,27 @@ Select capabilities by the requested result. Modules are independent instruction
 | Experiment | evaluate a cost claim | candidate/hypothesis, baseline, workload, acceptance rule | matched evidence + verdict | [Measurement](performance/01-measurement.md), [Acceptance](performance/10-foundation.md) |
 | Correctness | assess a proposed/implemented change | contract, diff/design, tests/oracle | preserved/violated invariants + missing verification | [Correctness](engineering/06-correctness-boundaries.md) |
 | Implementation | execute an accepted decision | scoped contract, concrete decision, affected code | changed code + verification | [Implementation](workflow.md#6-implement-one-structural-decision-at-a-time), [Verification](workflow.md#7-verify-proportionally) |
-| PWP retained state | pointers, children, derived fields, builder lifetime | owners/lifetimes, mutation, consumers, contract | keep/replace decision | [PWP decisions](engineering/compiler/profile/50-pwp-retained-state.md) |
-| Dense IDs / general SIMD | dense direct indexing, regular hot loops, gather/scatter, lane layout | identity domain, pass access pattern, semantics; profile/budget for speed | dense-slot/layout/SIMD decision + acceptance gates | [General SIMD](engineering/10-simd-and-dense-processing.md) |
+| PWP retained state | pointers, children, builder lifetime | owners/lifetimes, mutation, consumers, contract | keep/replace decision | [PWP decisions](engineering/compiler/profile/50-pwp-retained-state.md) |
+| General SIMD | already-selected identity/layout feeding regular hot loops, gather/scatter, tails | identity/layout result, loop semantics; profile/budget for speed | SIMD/backend decision + acceptance gates | [General SIMD](engineering/10-simd-and-dense-processing.md) |
 | 512-byte / lexical profile | batch/masks/compaction/lookup | grammar, source lifetime, backend targets; cost evidence for speed claims | selected technique + parity gates | [512 profile](engineering/compiler/25-pwp-512-profile.md) |
 | Compiler specialization | compiler-specific decision | relevant pipeline/lexical/state/validation inputs | selected compiler-block result | [Compiler router](engineering/09-wide-pointerless-compiler.md) |
+
+## Decision ownership
+
+One decision has one detailed owner. Routers may classify and delegate; they must not restate the owner's decision tree.
+
+| Decision | Detailed owner |
+| --- | --- |
+| broad replacement sequence / anti-slop gates | [Broad redesign](broad-redesign.md) |
+| scoped structural sequence / verification / reporting | [Workflow](workflow.md) |
+| structural pointer→ID, flat children, builder→frozen | [PWP retained state](engineering/compiler/profile/50-pwp-retained-state.md) |
+| canonical authority, store-vs-derive, admit/resolve once | [Canonical and derived](engineering/02-canonical-and-derived.md) |
+| performance typed IDs / flat relations | [Identity rules](performance/20-identity-and-relations.md) and DOD-019 where lookup-in-scan is the cause |
+| AoS/SoA/AoSoA, field width, packing/encoding | [Layout and encoding](performance/21-layout-and-encoding.md) |
+| vector backend, lane independence, gather/scatter, tails | [General SIMD](engineering/10-simd-and-dense-processing.md) |
+| compiler lexical/parser-facing representation | [Wide frontend](engineering/compiler/20-wide-frontend.md) |
+| explicit logical 512-byte lexical mechanics | [PWP/512 router](engineering/compiler/25-pwp-512-profile.md) |
+| repeated profiler optimization cycle | [Profiler route](#profiler-route) |
 
 ## Composition rules
 
@@ -88,7 +105,7 @@ After changed evidence invalidates an assumption, revisit only dependent decisio
 | “This profile shows hash lookup is 28% of target phase” | profiler route → matching lookup/identity rule | one causal candidate + matched result |
 | “Use PWP for this frozen graph; there is no lexer” | PWP retained state | justified pointer/ID/range decision |
 | “Simplify this compiler pipeline” | compiler structural route | pipeline candidate + validation requirements |
-| “Simplify this full pipeline and implement it” | structural route + Implementation/Correctness | contract preserved; claimed result supported |
+| “Simplify this full pipeline and implement it” | [Broad redesign](broad-redesign.md) | old path deleted; contract preserved; claimed result supported |
 
 ## Extend a capability
 
