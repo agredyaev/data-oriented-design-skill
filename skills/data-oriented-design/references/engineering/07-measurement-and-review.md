@@ -156,7 +156,7 @@ This document consolidates DOD and YAGNI guidance for implementation, review, an
 
 The policy covers:
 
-- YAGNI-first implementation;
+- operation-first structural design, followed by YAGNI necessity checks;
 - no speculative runtime services, stores, sources of truth, generic backends, plugin systems, dependency-injection frameworks, or caches;
 - dense typed IDs;
 - contiguous arrays;

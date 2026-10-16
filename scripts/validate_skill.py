@@ -162,11 +162,13 @@ def validate(repo):
             errors.append(f'Unknown rule ID in {path.relative_to(root)}: {rule}')
     router = documents[entry]
     goal = router.find('## Primary goal')
+    dod = router.find('**DOD (Data-Oriented Design):**')
+    pwp = router.find('**PWP (Programming Without Pointers):**')
     preflight = router.find('## Mandatory DOD preflight')
     override = router.find('### Structural-route override')
     routing = router.find('## Choose the task mode')
-    if not (0 <= goal < preflight < override < routing):
-        errors.append('Primary DOD/PWP goal, preflight and structural override must precede task-mode routing')
+    if not (0 <= goal < dod < pwp < preflight < override < routing):
+        errors.append('Primary DOD/PWP definitions, preflight and structural override must precede task-mode routing')
     if 'Do **not** accept YAGNI-only cleanup' not in router:
         errors.append('Missing structural route override')
     structural_row = router.find('| Architecture redesign or structural cleanup with OOP/layer signals |')

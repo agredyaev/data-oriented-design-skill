@@ -21,21 +21,11 @@ without an existing requirement and demonstrated need.
 
 ---
 
-## Rule YAGNI-02 — Every abstraction must have a concrete responsibility
+## Rule YAGNI-02 — A useful responsibility does not justify a separate abstraction
 
-For every abstraction, ask:
+Identify the required computation/invariant, then apply the [responsibility-versus-representation decision](10-oop-to-dod.md#decision-tree-responsibility-versus-representation). Compare the current layer, object or trait with a direct function/pass over explicitly owned data.
 
-> What concrete ownership, validation, lifetime, error, transaction, or compatibility responsibility does this abstraction provide?
-
-If the answer is only:
-
-- "clean architecture";
-- "future extensibility";
-- "we may need another backend";
-- "it makes testing easier";
-- "it removes a few repeated lines";
-
-then the abstraction is not justified by itself.
+A separate abstraction survives only when the simpler target fails a named semantic, lifetime, external or correctness constraint, or a supported cost requirement. Otherwise preserve its work in the target and MERGE/REMOVE its wrapper. Existing callers, "clean architecture", future extensibility, test mocks and reduced LOC do not prove necessity.
 
 ---
 
@@ -226,7 +216,7 @@ trait PlannerBackend {
 struct DefaultPlanner;
 ```
 
-when there is one required planner and no external/test boundary requiring substitution.
+when there is one required planner and no concrete external, runtime or independent-oracle boundary requiring substitution. A test mock alone does not justify the trait.
 
 Do not add polymorphism "in case we need another implementation."
 

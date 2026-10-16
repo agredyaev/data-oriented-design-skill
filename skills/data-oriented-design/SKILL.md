@@ -5,11 +5,13 @@ description: Use for OOP-to-DOD/PWP redesign, data layout, retained memory, hot 
 
 # Data-Oriented Design
 
-Use this file as the entry router. Select one module or compose several by task type. Do not read the whole skill tree by default.
-
-Reuse valid evidence and execute only missing work.
+Route by task scope, load only needed references, and reuse valid evidence.
 
 ## Primary goal
+
+**DOD (Data-Oriented Design):** Derive the implementation from required operations, data access/mutation and physical layout—not object hierarchies.
+
+**PWP (Programming Without Pointers):** Prefer explicitly owned retained data with typed IDs, offsets and ranges over pointer-linked domain graphs. Local borrows and necessary lifetime, stable-address or FFI handles remain valid.
 
 For architecture or structural cleanup, derive a **DOD/PWP target from computations and physical data access**, not from existing OOP layers. Prefer minimal explicit passes, data shaped for real operations, clear ownership/lifetimes and typed IDs/offsets/ranges for retained internal relationships. Remove unnecessary Service/Repository/DTO/Mapper/Manager layers, object graphs and owned copies. Preserve independently required correctness and external boundaries.
 
@@ -61,10 +63,6 @@ Use [engineering rules index](references/dod-yagni-engineering-rules.md) only wh
 ## Performance routing
 
 [Performance methodology](references/performance-methodology.md) routes diagnosis to one rule pack. Do not load all 33 rules at once.
-
-## Choose the execution route
-
-Use [module composition](references/modules.md#choose-and-switch-routes) for routes/switching and [workflow](references/workflow.md) for full redesign or shared verification/reporting.
 
 ## Read decisions consistently
 

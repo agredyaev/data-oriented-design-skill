@@ -30,17 +30,29 @@ class ValidateSkillTests(unittest.TestCase):
     def test_current_skill(self):
         self.assertEqual(validate(self.repo), [])
 
+    def test_missing_dod_definition(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('**DOD (Data-Oriented Design):**',
+                                                '**Unexplained acronym:**', 1))
+        self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
+
+    def test_missing_pwp_definition(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('**PWP (Programming Without Pointers):**',
+                                                '**Unexplained acronym:**', 1))
+        self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
+
     def test_missing_mandatory_preflight(self):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('## Mandatory DOD preflight',
                                                 '## Optional design advice', 1))
-        self.assert_invalid('Primary DOD/PWP goal, preflight and structural override')
+        self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
 
     def test_missing_structural_override(self):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('### Structural-route override',
                                                 '### Local cleanup', 1))
-        self.assert_invalid('Primary DOD/PWP goal, preflight and structural override')
+        self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
 
     def test_yagni_precedes_structural_route(self):
         path = self.skill / 'SKILL.md'

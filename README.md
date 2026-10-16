@@ -14,7 +14,7 @@ The workflow owns the default full-route composition and proportional reporting 
 
 The performance methodology covers workload definition, scaling checks, hotspot diagnosis, access patterns, falsifiable hypotheses, matched benchmarks, and causal acceptance.
 
-An OOP → DOD/PWP conversion produces explicit passes/functions, owned data stores and typed internal relationships. Naming an old object's responsibility does not justify keeping its architecture. The transformation module requires a concrete target, removal/replacement map, and scoped evidence for remaining mechanisms. Partial conversion is reported as partial; structural conversion alone does not establish a speedup.
+An OOP → DOD/PWP conversion (see [definitions](skills/data-oriented-design/SKILL.md#primary-goal)) produces explicit passes/functions, owned data stores and typed internal relationships. Naming an old object's responsibility does not justify keeping its architecture. The transformation module requires a concrete target, removal/replacement map, and scoped evidence for remaining mechanisms. Partial conversion is reported as partial; structural conversion alone does not establish a speedup.
 
 ## Coverage
 
