@@ -283,7 +283,7 @@ If any appears necessary, the redesign is **NOT DONE**. Return to Stage 2/3 and 
 
 Examples:
 
-- `Arc<Mutex<T>>` reveals a concurrency requirement. Target response: assign mutation to one owner, partition state, or communicate immutable/owned messages. Do not replace it with another shared-mutable domain wrapper.
+- `Arc<Mutex<T>>` reveals a concurrency requirement. Target response: assign mutation to one owner, partition state, or communicate immutable/owned messages. Shared mutable domain ownership is not an allowed broad-target fallback. Do not replace it with another shared-mutable domain wrapper.
 - a trait with known implementations reveals behavior selection. Target response: closed enum/direct dispatch or separate concrete passes. Do not preserve internal dynamic dispatch.
 - a repository/service layer reveals persistence/business work. Target response: direct typed boundary functions plus concrete computation passes. Do not recreate the layer under a new name.
 - an authorization wrapper reveals an ordering/authority invariant. Target response: keep the check at the external boundary or direct operation entry; the wrapper object is deleted.

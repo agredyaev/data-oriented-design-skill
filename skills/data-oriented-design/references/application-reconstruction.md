@@ -169,8 +169,7 @@ TARGET QUESTION
 can one scheduler own mutation and publish frozen arrays?
 
 YES -> responsibility preserved; Arc + Mutex deleted.
-NO  -> redesign ownership/partitioning/message flow again; shared mutable
-       domain ownership is not an allowed broad-target fallback.
+NO  -> redesign ownership/partitioning/message flow again. Shared mutable domain ownership is not an allowed broad-target fallback.
 ```
 
 This is a quality gate against losing semantics, not a preservation gate for the old architecture. **Current mechanisms are witnesses, not target candidates.**

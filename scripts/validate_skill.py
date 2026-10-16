@@ -408,8 +408,24 @@ def validate(repo):
         scoped = documents.get(root / relative, '')
         if 'In broad redesign' not in scoped and 'in broad redesign' not in scoped:
             errors.append(f'Focused mechanism block missing broad-redesign override: {relative}')
-        if 're-derive' not in scoped:
-            errors.append(f'Focused mechanism block must re-derive broad target mechanism: {relative}')
+
+    ownership_scope = documents.get(root / 'references/engineering/04-ownership-and-concurrency.md', '')
+    for invariant in (
+        'shared domain ownership is not a target option',
+        'A lock around domain state is not a broad-target option',
+        'an internal domain lock means the redesign is incomplete',
+        'opaque native handle only at the boundary',
+    ):
+        if invariant not in ownership_scope:
+            errors.append(f'Ownership block permits broad internal shared-ownership fallback: {invariant}')
+
+    yagni_scope = documents.get(root / 'references/engineering/05-yagni-and-cleanup.md', '')
+    for invariant in (
+        'does not re-create an internal service/trait/wrapper mechanism',
+        'internal DTO/conversion chains are deleted',
+    ):
+        if invariant not in yagni_scope:
+            errors.append(f'YAGNI block permits broad internal abstraction fallback: {invariant}')
 
     ownership_text = documents.get(root / 'references/engineering/04-ownership-and-concurrency.md', '')
     for required in (
