@@ -77,7 +77,7 @@ Build a pass/access matrix:
 | readiness | model IDs | dependency ranges, status | ready IDs, counts | request/pass |
 | execute | ready IDs | action columns | result/output | request |
 
-Use it to decide which values travel together, which relations need ranges/IDs, which data is cold, and which scratch must stay local. If `Class -> Row + typed IDs` leaves the same entity-centric grouping and the passes consume only field subsets, continue the redesign. AoS remains valid when the access matrix shows whole-record consumption.
+Use it to decide which values travel together, which relations need ranges/IDs, which data is cold, and which scratch must stay local. If `Class -> Row + typed IDs` leaves the same entity-centric grouping and the passes consume only field subsets, continue the redesign. Sequential use of all fields does not itself imply AoS; compare candidate layouts from access pattern, padding/stride, encoding, other passes, and measured locality when cost decides.
 
 ### Example: not just pointerless OOP
 
@@ -128,7 +128,7 @@ Apply the element-necessity decisions in [Workflow](../workflow.md#3-apply-the-e
 
 Do not preserve a layer because it already exists. Do not force an array, typed ID, SoA, CSR, interning scheme, or packing pass without checking the contract and workload.
 
-A candidate can keep the current design. “No justified simplification” is a valid conclusion when supported by code/contract evidence. Missing evidence is an unknown, not a reason to fabricate a defect.
+In focused work, a candidate can keep the current mechanism when evidence supports it. In broad redesign, the old internal design is not a candidate: only a target independently re-derived from contracts, passes, ownership/lifetimes, and constraints may happen to use the same primitive. Missing evidence is an unknown, not a reason to preserve or fabricate a mechanism.
 
 ## Comparing candidates
 

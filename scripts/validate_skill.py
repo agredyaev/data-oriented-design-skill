@@ -389,6 +389,24 @@ def validate(repo):
     if pointerless.count('## Decision tree') != 1:
         errors.append('Compiler pointerless router must have exactly one classification tree')
 
+    for relative in (
+        'references/engineering/04-ownership-and-concurrency.md',
+        'references/engineering/05-yagni-and-cleanup.md',
+    ):
+        scoped = documents.get(root / relative, '')
+        if 'In broad redesign' not in scoped and 'in broad redesign' not in scoped:
+            errors.append(f'Focused mechanism block missing broad-redesign override: {relative}')
+        if 're-derive' not in scoped:
+            errors.append(f'Focused mechanism block must re-derive broad target mechanism: {relative}')
+
+    structural_text = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
+    for invariant in (
+        'Sequential use of all fields does not itself imply AoS',
+        'In broad redesign, the old internal design is not a candidate',
+    ):
+        if invariant not in structural_text:
+            errors.append(f'Structural analysis missing broad-redesign invariant: {invariant}')
+
     pwp_text = documents.get(
         root / 'references/engineering/compiler/profile/50-pwp-retained-state.md', '')
     if '## Decision tree: store or derive a field' in pwp_text:

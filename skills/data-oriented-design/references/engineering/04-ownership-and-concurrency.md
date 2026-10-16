@@ -2,6 +2,8 @@
 
 Use this block to decide whether sharing, reference counting, stable addresses, or synchronization have a concrete responsibility. `Arc`, `Mutex`, references, and pointers are mechanisms, not automatic defects.
 
+**Scope:** in focused work this block may preserve an existing mechanism. In broad redesign it returns only the lifetime/concurrency/FFI requirement; [Broad redesign](../broad-redesign.md#stage-4--responsibility-transfer-and-abstraction-veto) must re-derive the target mechanism from scratch.
+
 ## Decision tree: shared ownership
 
 ```text
@@ -10,7 +12,7 @@ Is the value retained beyond one local operation?
   YES
     |
     |-- Does an FFI/ABI/native API require a stable pointer or reference-counted handle?
-    |     YES -> KEEP that handle; name the boundary.
+    |     YES -> focused: KEEP that handle; broad: record the stable-handle requirement and re-derive the target carrier.
     |     NO
     |
     |-- Do multiple owners genuinely outlive one common root owner?
@@ -38,7 +40,7 @@ struct Engine {
 fn execute(engine: &Engine, request: &Request) -> Result<Response> { ... }
 ```
 
-Keep `Arc<Manifest>` when spawned tasks genuinely need independently cloned ownership.
+Focused work may keep `Arc<Manifest>` when spawned tasks genuinely need independently cloned ownership. Broad redesign records that lifetime requirement and re-derives the target ownership.
 
 ## Decision tree: `Mutex` / shared mutation
 
@@ -49,12 +51,12 @@ Is the protected state mutated concurrently by multiple execution contexts?
   YES
     |
     |-- Is it one real shared resource whose invariant spans those writers?
-    |     YES -> KEEP synchronization required by that invariant.
+    |     YES -> synchronization semantics are required; focused may KEEP, broad must choose the smallest target synchronization/ownership mechanism.
     |     NO
     |
     |-- Can mutable ownership be partitioned/localized without changing semantics?
           YES -> TEST local ownership/sharding; include merge/order costs.
-          NO -> KEEP a synchronization design that preserves the shared invariant.
+          NO -> focused may KEEP; broad re-derives the smallest synchronization design that preserves the invariant.
 ```
 
 ### Example: `Arc<Mutex<Model>>`

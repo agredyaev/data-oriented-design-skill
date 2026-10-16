@@ -2,13 +2,15 @@
 
 Use this block to decide whether an abstraction, wrapper, framework, cache, service, registry, or generic layer has a current responsibility.
 
+**Scope:** in focused work a supported result may preserve the existing mechanism. In broad redesign this block returns only the required responsibility/invariant; [Broad redesign](../broad-redesign.md#stage-4--responsibility-transfer-and-abstraction-veto) decides a newly derived target mechanism.
+
 ## Decision tree: abstraction necessity
 
 ```text
 For the layer/trait/wrapper/service, can you name a current responsibility for:
   ownership / lifetime / validation / authorization / transaction /
   compatibility / error translation / required polymorphism?
-  YES -> KEEP that responsibility; simplify only around it.
+  YES -> preserve the responsibility. Focused work may keep the mechanism; broad redesign must re-derive the carrier.
   NO
     |
     |-- Is the only reason future extensibility, "clean architecture",
@@ -105,7 +107,7 @@ Add retained cache state only for demonstrated repeated computation, not merely 
 ```text
 Do two similar blocks protect different invariants, authorities, recovery points,
 wire semantics, or an independent test oracle?
-  YES -> KEEP them separate.
+  YES -> preserve both invariants/authorities. Focused work may keep separate mechanisms; broad redesign re-derives their target carriers.
   NO
     |
     |-- Is the repeated code a small identical mechanic?
@@ -128,7 +130,7 @@ Do not replace both checks with one early `validate_transaction()?` if authority
 
 ```text
 Does A -> B -> C inside one process cross a real boundary or add required information?
-  YES -> KEEP the required conversion.
+  YES -> preserve the boundary/information requirement. Focused work may keep the conversion; broad redesign re-derives its minimal target form.
   NO -> can producer/consumer share one canonical type or narrow projection?
           YES -> REMOVE/MERGE the redundant DTO layer.
           NO -> name the concrete reason before keeping it.

@@ -2,7 +2,7 @@
 
 Use this route for repository/module redesign, especially over-abstracted OOP code. This file owns the broad sequence. Other references are detail blocks selected by a gate below; do not compose another workflow around it.
 
-The goal is not cleaner classes. Reconstruct the required computation, synthesize a smaller data-oriented target, implement it directly, delete superseded architecture, then tune measured costs.
+The goal is not cleaner classes. **Existing internal architecture has zero preservation value.** Reconstruct the required computation from external contracts and required invariants, synthesize a new DOD/PWP target, implement it directly, delete superseded architecture, then tune measured costs.
 
 ## Stage 0 — Reconstruct the whole application
 
@@ -12,7 +12,7 @@ Do this before judging local mechanisms. The current code is evidence of respons
 
 Hard rules:
 
-- **No current mechanism receives KEEP status during reconstruction.**
+- **No current mechanism receives KEEP status during reconstruction.** Current internal mechanisms are witnesses to requirements, not target candidates.
 - Extract the required responsibility from `Arc`, `Mutex`, traits, services, wrappers, security seams, caches, and DTOs; do not preserve the mechanism by default.
 - Build one global target architecture before implementing any route.
 - Apply the classifier below to each discovered route. It chooses route scope; it does not decide which current mechanisms survive.
@@ -91,7 +91,7 @@ A broad redesign is not complete until all applicable conditions hold:
 - performance claims have matched evidence;
 - 512 techniques are used only when the byte/frontend gate selects them.
 
-Do not stop at `Class -> Row + IDs`. That can be an intermediate step, not the broad result.
+Do not stop at `Class -> Row + IDs`. That can be an intermediate step, not the broad result. The final target must be explainable without referring to the old class/service/repository/interface hierarchy; if a target element exists because "the old system had X", redesign is incomplete.
 
 ## Stage 1 — Reconstruct the selected route
 
@@ -132,7 +132,7 @@ When the route contains per-element boundary calls, known keys resolved one by o
 
 ## Stage 2 — Synthesize required work with the old architecture erased
 
-Keep external contracts and correctness boundaries. Mentally discard internal services/classes/managers/DTOs and write the smallest computation that produces the required output.
+Keep external contracts and proven correctness invariants. Treat every current internal service/class/manager/repository/trait/DTO/ownership mechanism as unavailable while synthesizing the target. Write the smallest computation that produces the required output.
 
 Build a pass/access matrix:
 
@@ -142,6 +142,18 @@ Build a pass/access matrix:
 | resolve | raw relations | admitted IDs, lookup | typed relations | build |
 | schedule | active IDs | status, relation ranges | ready IDs | pass-local |
 | execute | ready IDs | actions | output | request |
+
+Default target shape:
+
+```text
+concrete data
++ direct functions/passes
++ explicit owner
++ explicit lifetime
++ explicit external boundary I/O
+```
+
+Anything beyond this default must be independently forced by the target requirements, not inherited from the old implementation.
 
 Rules:
 
@@ -183,7 +195,7 @@ output
 
 Derive layout from the pass/access matrix:
 
-- whole-record consumption together → AoS may be correct;
+- sequential use of most/all fields does not force AoS; compare AoS and aligned SoA/grouped layouts from padding, stream count, encoding, other passes, and measured cache/TLB behavior;
 - stable field subsets → test SoA or hot/cold split;
 - variable relations → flat side arrays + offsets/ranges when mutation permits;
 - long-lived domain relationships → typed IDs/offsets when one owner can preserve lifetime;
@@ -241,8 +253,8 @@ What exact requirement would be lost if the old mechanism disappeared?
     |
     '-- What is the smallest mechanism required by the TARGET design?
           choose it from target lifetime/concurrency/boundary facts.
-          Only if that mechanism is structurally the same may the old
-          construct survive.
+          The target may independently choose the same primitive, but this is a new
+          decision; the old construct itself never receives preservation credit.
 ```
 
 Examples:
@@ -250,6 +262,49 @@ Examples:
 - `Arc<Mutex<T>>` proves a current sharing/synchronization responsibility, not that target state needs a lock. If target ownership becomes single-writer/root-owned, delete both.
 - a trait with two known backends proves backend selection exists. A closed target can use an enum/direct dispatch; retain dynamic dispatch only for a real open/plugin/runtime requirement.
 - an authorization wrapper proves an authority check must occur at a specific boundary/time. Preserve that invariant; the wrapper type itself has no privilege.
+
+### Internal mechanism burden of proof
+
+The following are **rejected by default in a broad target** until a target requirement independently forces them:
+
+```text
+Service / Manager / Repository / Provider / Coordinator
+Factory / Facade / Adapter / Context object
+trait/interface or dyn dispatch
+Arc/Rc
+Mutex/RwLock
+pointer/object graph
+registry/event bus
+cache
+DTO/conversion layer
+shared mutable context
+```
+
+For each proposed exception run:
+
+```text
+Would this mechanism still be invented if the implementer knew only:
+  external contracts
+  required invariants
+  target passes
+  target ownership/lifetimes
+  measured performance constraints
+and had never seen the old implementation?
+
+  NO / UNCLEAR -> REJECT.
+  YES
+    |
+    |-- Name the requirement that makes plain data + direct passes insufficient.
+    |     NONE / "clean architecture" / future flexibility -> REJECT.
+    |     NAMED REQUIREMENT
+    |
+    |-- Can ownership, lifetime, data placement, phase boundary,
+    |   closed dispatch, or direct caller relationships remove the need?
+          YES -> REJECT the extra mechanism.
+          NO  -> allow only the smallest target mechanism satisfying it.
+```
+
+A rationale of "the old system had X", "this layer is conventional", or "it improves abstraction/testability" fails the gate.
 
 Additional gates:
 
@@ -289,7 +344,7 @@ ADD: exact target data types/functions/passes
 CHANGE: exact callers/boundaries
 DELETE: old types/services/wrappers/state/paths made obsolete
 RESPONSIBILITIES: invariants/lifetimes/security/concurrency carried into target
-KEEP: only target mechanisms independently re-derived as minimal/required
+TARGET EXCEPTIONS: non-default mechanisms independently re-derived from target requirements, with proof
 ```
 
 Also report current→target mechanism counts and a concrete code-size estimate from named files/types where possible. Performance estimates must name removed work and stay `UNVERIFIED` until measured.
@@ -301,7 +356,8 @@ Reject before coding when:
 - duplicate canonical old/new state remains;
 - permanent synchronization between old/new models is required;
 - no obsolete mechanisms can be named for deletion;
-- increased architectural mechanisms lack contract requirement or measured cause.
+- increased architectural mechanisms lack contract requirement or measured cause;
+- any internal abstraction/shared-ownership/dynamic-dispatch mechanism appears without passing the target-side burden-of-proof gate.
 
 Line count is not the sole metric, but a broad redesign that mostly adds production code without deleting obsolete mechanisms has failed this gate.
 

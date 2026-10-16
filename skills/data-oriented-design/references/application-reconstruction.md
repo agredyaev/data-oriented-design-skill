@@ -142,13 +142,13 @@ For every nontrivial current mechanism write:
 
 | Current mechanism | Observed purpose | Required responsibility/invariant | Target carrier | Old mechanism |
 | --- | --- | --- | --- | --- |
-| `Arc<Mutex<State>>` | shared mutation | terminal state applied once | UNKNOWN until target ownership is designed | undecided |
-| trait + implementations | backend selection | one of supported backends executes request | UNKNOWN | undecided |
-| auth wrapper | access decision | authorization occurs before protected action | UNKNOWN | undecided |
+| `Arc<Mutex<State>>` | shared mutation | terminal state applied once | UNKNOWN until target ownership is designed | DELETE CANDIDATE |
+| trait + implementations | backend selection | one of supported backends executes request | UNKNOWN | DELETE CANDIDATE |
+| auth wrapper | access decision | authorization occurs before protected action | UNKNOWN | DELETE CANDIDATE |
 
 Rules:
 
-1. **No current mechanism receives KEEP status during reconstruction.**
+1. **No current mechanism receives KEEP status during reconstruction.** Mark current internal mechanisms `DELETE CANDIDATE`; only the extracted responsibility/invariant carries forward.
 2. A current mechanism can prove that a responsibility exists; it cannot prove that the same mechanism belongs in the target.
 3. Record security, ordering, concurrency, lifetime, recovery, wire, FFI, and independent-oracle responsibilities explicitly.
 4. If the responsibility disappears when the system is redesigned, prove why the underlying contract disappeared; do not silently drop it.
@@ -172,7 +172,7 @@ NO  -> choose the smallest synchronization mechanism that satisfies the
        remaining target concurrency model.
 ```
 
-This is a quality gate against losing semantics, not a preservation gate for the old architecture.
+This is a quality gate against losing semantics, not a preservation gate for the old architecture. **Current mechanisms are witnesses, not target candidates.**
 
 ## Redesign route portfolio
 
@@ -256,7 +256,8 @@ The target must answer:
 - which representation is canonical at each lifetime;
 - which boundaries serialize;
 - which responsibilities cross boundaries;
-- which routes delete old mechanisms rather than wrap them.
+- which routes delete old mechanisms rather than wrap them;
+- which non-default target mechanisms passed an explicit burden-of-proof test.
 
 Prefer subsystem boundaries that match real process/security/lifetime boundaries. Do not preserve a crate/service/interface boundary merely because it exists today.
 
@@ -268,6 +269,8 @@ Do not start route implementation until all hold:
 - every externally meaningful path has a current and target route;
 - every required responsibility has a named target carrier or is explicitly `UNKNOWN`;
 - no current mechanism is marked KEEP merely because it currently carries a required responsibility;
+- every old internal mechanism is a `DELETE CANDIDATE` until a target requirement independently re-derives a mechanism;
+- every non-default target mechanism would still be invented by an implementer who never saw the old internal architecture;
 - each target canonical state has one authority/owner;
 - route outputs compose into one global target architecture;
 - no route requires a permanent old↔new adapter, dual canonical state, or synchronization bridge;
