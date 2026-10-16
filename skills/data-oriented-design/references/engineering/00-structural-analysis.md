@@ -67,7 +67,7 @@ Use symbolic complexity for build, query, update, output, and extra space when i
 
 ## Candidate-design techniques
 
-Apply the element-necessity decisions in [Workflow](../workflow.md#3-apply-the-element-necessity-test). For an element that can change, consider these concrete alternatives:
+Apply the element-necessity decisions in [Workflow](../workflow.md#4-apply-the-element-necessity-test). For an element that can change, consider these concrete alternatives:
 
 | Current element | Candidate | Check before selecting |
 | --- | --- | --- |
