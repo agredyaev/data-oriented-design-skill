@@ -305,5 +305,90 @@ class ValidateSkillTests(unittest.TestCase):
         self.assert_invalid('Application reconstruction missing section')
 
 
+
+    def test_pipeline_requires_five_decision_trees(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace('## Decision tree: late materialization',
+                                     '## Late materialization notes'))
+        self.assert_invalid('Pipeline materialization requires five executable decision trees')
+
+    def test_pipeline_batching_keeps_ordered_dependency(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'If each lookup depends on a write from the prior iteration, keep the ordered path.',
+            'Batch all element lookups whenever keys are known.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_pipeline_compile_apply_rejects_input_back_lookup(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'A compiled apply plan must not require ordinary lookups back into the admitted wire object.',
+            'Compiled plans may look back into the wire object for normal values.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_pipeline_allows_legitimate_raw_retention(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Retain a raw/source reference only when exact bytes, positions, signatures, or audit semantics require it.',
+            'Never retain raw/source references.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_pipeline_late_materialization_requires_snapshot(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Late materialization requires a consistent version/snapshot across selection and materialization.',
+            'Late materialization may fetch any newer version.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_pipeline_history_prefers_minimal_projection(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Persist the smallest stable projection required by future consumers.',
+            'Persist the complete computation graph for flexibility.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_pipeline_preserves_exact_audit_artifact(self):
+        path = self.skill / 'references/engineering/11-pipeline-materialization.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Exact audit/replay artifacts are allowed when exact historical representation is itself the contract.',
+            'Always shrink audit/replay history to a projection.',
+        ))
+        self.assert_invalid('Pipeline materialization missing invariant')
+
+    def test_classifier_requires_closed_world_dispatch(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace('S11 CLOSED_WORLD_DISPATCH',
+                                     'S11 OPTIONAL_DISPATCH'))
+        self.assert_invalid('Broad classifier must include S11 closed-world dispatch')
+
+    def test_application_reconstruction_pins_revision(self):
+        path = self.skill / 'references/application-reconstruction.md'
+        text = path.read_text()
+        path.write_text(text.replace('ANALYSIS REVISION = <immutable revision>',
+                                     'ANALYSIS REVISION = main'))
+        self.assert_invalid('Application reconstruction missing invariant')
+
+    def test_application_reconstruction_keeps_static_work_distinct_from_speed(self):
+        path = self.skill / 'references/application-reconstruction.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Static work counts can justify eliminating avoidable work; they do not prove wall-clock speedup.',
+            'Static work counts prove wall-clock speedup.',
+        ))
+        self.assert_invalid('Application reconstruction missing invariant')
+
 if __name__ == '__main__':
     unittest.main()
