@@ -35,9 +35,10 @@ Start with at most three references after this router. Load another only for a m
 | Wrappers, traits, DTO layers, DI, registries, generic executors, speculative caches/services | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) |
 | Authorization, transactions, claims/leases/fences, migrations, recovery, wire checks | [Correctness boundaries](references/engineering/06-correctness-boundaries.md) |
 | Evidence needed to accept a structural, memory, phase, or end-to-end claim | [Measurement and review](references/engineering/07-measurement-and-review.md) |
-| A concrete Rust transformation would clarify the design | [Examples](references/engineering/08-examples.md) |
+| Concrete Rust transformation | [Examples](references/engineering/08-examples.md) |
 | PWP retained ownership, flattening, derived fields, builder lifetime | [PWP decisions](references/engineering/compiler/profile/50-pwp-retained-state.md) |
-| Explicit 512-byte profile, masks, compaction, compact lexical lookup | [512-byte profile router](references/engineering/compiler/25-pwp-512-profile.md) |
+| Dense IDs, direct indexing, SIMD, gather/scatter, vector tails | [General SIMD](references/engineering/10-simd-and-dense-processing.md) |
+| 512-byte lexical masks/compaction/lookup | [512 profile](references/engineering/compiler/25-pwp-512-profile.md) |
 | Compiler/tokenizer/parser/IR | [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) |
 
 For compiler/frontend code, use [Compiler DOD](references/engineering/09-wide-pointerless-compiler.md) unless a focused PWP/512 route already selected the block. Use the [engineering fallback index](references/dod-yagni-engineering-rules.md) only when the primary block is unclear.

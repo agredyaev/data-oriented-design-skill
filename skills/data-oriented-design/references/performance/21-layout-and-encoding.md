@@ -3,30 +3,20 @@
 ### DOD-006 decision tree
 
 ```text
-Does a hot operation use only a subset of fields?
- |-- NO
- |    |
- |    '-- Does repeated row padding breach a memory budget?
- |           |-- NO -> Keep AoS.
- |           '-- YES -> Test field reorder first. Then test a split if padding remains.
- '-- YES
-      |
-      |-- Does measured full-row work dominate the target workload?
-      |      |-- YES -> Keep AoS as the baseline.
-      |      '-- NO
-      |
-      |-- Is the hot access a sequential field-subset scan?
-      |      |-- NO -> Test a hot/cold split. Keep AoS if random object access wins.
-      |      '-- YES
-      |
-      |-- Does pure SoA create page, TLB, or multi-column working-set cost?
-             |-- NO -> Test SoA.
-             '-- YES -> Test AoSoA and benchmark the chunk size.
+What access pattern dominates the relevant pass?
+ |-- Sequential subset of stable fields -> Test SoA or hot/cold split.
+ |-- Sequential most/all fields -> AoS and SoA are both candidates.
+ |      Compare padding, number of streams, vectorization, encoding, and other passes.
+ |-- Random access needing many fields together -> Keep AoS/hot-record as baseline.
+ |
+ '-- Does pure SoA create page, TLB, or multi-column working-set cost?
+        |-- NO -> Keep the best measured candidate.
+        '-- YES -> Test AoSoA/grouped columns and benchmark chunk size.
 ```
 
 ### DOD-006 — Choose AoS, SoA, or AoSoA from the access pattern
 - **Symptom:** A repeated loop over `N` AoS rows reads one field. Or each row carries padding that field reordering cannot remove.
-- **Action:** Keep AoS when full-row access dominates. Use SoA for sequential field-subset scans. Test AoSoA when pure SoA increases page or TLB pressure. Keep fields consumed together in one group. Update aligned columns together.
+- **Action:** Do not infer AoS from logical full-row use. For sequential passes, compare AoS and aligned SoA/grouped columns using padding, stream count, vectorization, encoding, and neighboring-pass access. Use SoA for stable field-subset scans; keep AoS/hot-record as a baseline for random multi-field access. Test AoSoA when pure SoA increases page/TLB or too-many-stream pressure. Update aligned columns together.
 - **Check:** Compare total bytes, hot-pass time, full-row time, page and TLB behavior, and update cost. Benchmark AoSoA chunk size. A scan split alone does not remove field bytes.
 - **Example:** For 10,000 rows of `{score: 8 B, payload: 56 B}`, a score loop walks a 640 KB row region. `scores[i]: 8 B` plus `payloads[i]: 56 B` makes that loop walk an 80 KB column; raw fields still total 640 KB. The same split works for a flag-only pass: `flags[i]` holds each boolean beside `payloads[i]`, while the pass reads only `flags[]`. If false rows dominate and rows may move, DOD-020 can encode the flag as active/inactive array membership. A separate row `{link: 8 B, tag: 1 B}` can occupy 16 B with 8 B alignment: 160 KB for 10,000 rows. `links[]` plus `tags[]` uses 90 KB of raw elements before capacity. The AoS and column-only scans remain O(N); an active partition under DOD-020 visits A active rows. Time gains are `UNVERIFIED`.
 

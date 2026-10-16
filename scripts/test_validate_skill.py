@@ -226,5 +226,39 @@ class ValidateSkillTests(unittest.TestCase):
         ))
         self.assert_invalid('Broad redesign missing anti-slop invariant')
 
+
+    def test_general_simd_requires_dense_id_route(self):
+        path = self.skill / 'references/engineering/10-simd-and-dense-processing.md'
+        text = path.read_text()
+        path.write_text(text.replace('## Dense-ID → SIMD route', '## SIMD notes'))
+        self.assert_invalid('General SIMD block missing dense-ID to SIMD route')
+
+    def test_general_simd_rejects_sparse_external_id_array(self):
+        path = self.skill / 'references/engineering/10-simd-and-dense-processing.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Do not allocate an array by max external ID.',
+            'External integer IDs can directly size arrays.',
+        ))
+        self.assert_invalid('General SIMD block missing invariant')
+
+    def test_general_simd_keeps_scalar_reference(self):
+        path = self.skill / 'references/engineering/10-simd-and-dense-processing.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Keep the scalar semantics/reference available',
+            'Delete scalar semantics after vectorization',
+        ))
+        self.assert_invalid('General SIMD block missing invariant')
+
+    def test_general_simd_requires_five_trees(self):
+        path = self.skill / 'references/engineering/10-simd-and-dense-processing.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            '## Decision tree: gather/scatter or change the data flow',
+            '## Gather/scatter notes',
+        ))
+        self.assert_invalid('General SIMD block requires five executable decision trees')
+
 if __name__ == '__main__':
     unittest.main()

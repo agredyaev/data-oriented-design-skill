@@ -14,6 +14,7 @@ REQUIRED = (
     'references/dod-yagni-engineering-rules.md',
     'references/engineering/00-structural-analysis.md',
     'references/engineering/09-wide-pointerless-compiler.md',
+    'references/engineering/10-simd-and-dense-processing.md',
     'references/performance-methodology.md',
 )
 # Limits keep the always-loaded router small and stop rule packs becoming routers.
@@ -28,6 +29,7 @@ GENERAL_DECISION_BLOCKS = (
     'references/engineering/05-yagni-and-cleanup.md',
     'references/engineering/06-correctness-boundaries.md',
     'references/engineering/07-measurement-and-review.md',
+    'references/engineering/10-simd-and-dense-processing.md',
 )
 
 
@@ -283,6 +285,24 @@ def validate(repo):
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')
+    simd = root / 'references/engineering/10-simd-and-dense-processing.md'
+    if simd in documents:
+        simd_text = documents[simd]
+        for invariant in (
+            'A **dense ordinal** is an internal slot in a bounded contiguous domain',
+            'Do not allocate an array by max external ID.',
+            'SIMD does not imply a 512-byte logical batch.',
+            'Scatter needs an additional correctness check',
+            'Keep the scalar semantics/reference available',
+            'Stop at any stage that already solves the target.',
+        ):
+            if invariant not in simd_text:
+                errors.append(f'General SIMD block missing invariant: {invariant}')
+        if '## Dense-ID → SIMD route' not in simd_text:
+            errors.append('General SIMD block missing dense-ID to SIMD route')
+        if simd_text.count('## Decision tree:') < 5:
+            errors.append('General SIMD block requires five executable decision trees')
+
     compiler_router = root / 'references/engineering/09-wide-pointerless-compiler.md'
     if compiler_router in graph:
         blocks = {p for p in graph[compiler_router] if p.parent == root / 'references/engineering/compiler'}

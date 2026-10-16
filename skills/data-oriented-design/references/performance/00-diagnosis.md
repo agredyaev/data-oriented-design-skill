@@ -222,6 +222,8 @@ For example, a retained-memory target may pass at unchanged phase time. A phase-
 | Rare derived fields | recompute from retained source | DOD-017 |
 | Mostly inactive rows | active partition or active IDs | DOD-020 |
 | Repeated key search | index with lifetime cost | DOD-021 |
+| Dense/direct-index hot loop still CPU-bound | test lane SIMD after semantics gate | [General SIMD](../engineering/10-simd-and-dense-processing.md) |
+| Random indexed hot loop | align by dense slot, cluster, or measured gather/scatter | DOD-019 + [General SIMD](../engineering/10-simd-and-dense-processing.md) |
 | Many independent flags | packed mask | DOD-023 |
 | Growth and reallocation | reserve capacity or size exactly | DOD-033 |
 | Poor temporal locality | fusion, fission, blocking, clustering | DOD-024, DOD-025, DOD-026 |
@@ -248,6 +250,7 @@ For example, a retained-memory target may pass at unchanged phase time. A phase-
 | Repeated `N × M` scan or key search | Grouped rows or an index with maintenance cost | DOD-003, DOD-021 |
 | Repeated queries recompute one result | Cache or incrementally maintain the result | DOD-003, DOD-010 |
 | Several full passes use the same data | Fuse, split, or block the passes when semantics allow | DOD-024, DOD-025 |
+| Hot loop uses aligned dense columns with independent iterations | Test SIMD only after the general lane/alias/tail gate | [General SIMD](../engineering/10-simd-and-dense-processing.md) |
 | Pure SoA causes page or TLB pressure | Use bounded SoA chunks inside an AoSoA layout | DOD-006 |
 
 

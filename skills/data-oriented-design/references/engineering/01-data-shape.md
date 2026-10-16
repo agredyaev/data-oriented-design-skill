@@ -88,16 +88,15 @@ struct Relations {
 ## Decision tree: AoS, SoA, or hot/cold split
 
 ```text
-What does the dominant repeated pass read?
-  most fields together -> KEEP AoS unless padding/memory budget says otherwise.
-  a stable subset sequentially
-      -> TEST SoA or a hot/cold split.
-  random whole-record access
-      -> KEEP AoS as baseline; a split needs measured benefit.
+What access pattern does the dominant repeated pass use?
+  sequential stable subset -> TEST SoA or hot/cold split.
+  sequential most/all fields -> AoS and SoA are BOTH candidates;
+      compare padding, stream count, SIMD/encoding, and neighboring passes.
+  random access needing many fields -> KEEP AoS/hot-record as baseline.
 Does pure SoA increase page/TLB or multi-column working-set cost?
-  YES -> TEST AoSoA/chunking.
-Does the candidate force full-record reconstruction in the hot loop?
-  YES -> REJECT that split.
+  YES -> TEST AoSoA/chunking or grouped columns.
+Does the candidate force record reconstruction/scatter in the hot loop?
+  YES -> REJECT that split unless measurement supports the trade-off.
 ```
 
 ### Example: status scan

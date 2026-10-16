@@ -24,5 +24,7 @@ Do not load all rule packs by default. Select a family from existing evidence or
 
 For a broad structural redesign, use [Structural analysis](engineering/00-structural-analysis.md). For profiler-led work, use [Route selection](modules.md#choose-and-switch-routes) and inspect the selected hotspot first. Check whether a mechanism can be removed before tuning it; expand to a structural map when the cause requires one.
 
+If a trusted profile identifies a regular dense/direct-index loop, gather/scatter, lane masking, or vectorization opportunity after the relevant DOD rule, use [General SIMD](engineering/10-simd-and-dense-processing.md). This is a backend/loop decision, not a new DOD rule ID.
+
 The complete rule set remains DOD-001 through DOD-033. Each rule keeps one decision tree and one rule definition in the routed packs.
 
