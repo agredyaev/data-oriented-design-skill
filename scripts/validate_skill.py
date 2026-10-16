@@ -183,15 +183,19 @@ def validate(repo):
     if eng_start < 0 or eng_yagni < eng_start:
         errors.append('Engineering YAGNI routing must follow structural override')
     c4_ref = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
-    for tag in ('## Mandatory C4 as-is preflight', '**L1', '**L2', '**L3', '**L4', 'CANDIDATE'):
+    for tag in ('## Mandatory C4 as-is preflight', '### C4 coverage gate', '**L1', '**L2', '**L3', '**L4', 'CANDIDATE', 'to-be C4 L2/L3'):
         if tag not in c4_ref:
             errors.append(f'Missing mandatory C4 definition: {tag}')
     modules = documents.get(root / 'references/modules.md', '')
     if 'Before selecting any module for repository-code work' not in modules:
         errors.append('C4 must precede focused module routing')
+    if 'If C4 flags structural candidates on the affected path' not in modules:
+        errors.append('Affected-path structural candidates must override focused routing')
     workflow = documents.get(root / 'references/workflow.md', '')
     if '## 2. Draw the as-is C4 system and current process/data' not in workflow:
         errors.append('Workflow step 2 must draw C4')
+    if 'to-be C4 L2/L3' not in workflow:
+        errors.append('Structural redesign must include to-be C4')
     step_titles = re.findall(r'^## ([1-8])[.] ', workflow, re.M)
     if step_titles != list('12345678') or '## 3. Derive the physical operation shape' not in workflow:
         errors.append('Workflow must derive physical operation shape before necessity and target design')
@@ -203,8 +207,8 @@ def validate(repo):
         errors.append('Missing owned representation budget')
     if re.search(r'^\d+\. ', router, re.M):
         errors.append('SKILL.md must route to the workflow, not duplicate its numbered sequence')
-    if 'Start with at most three references' not in router:
-        errors.append('Missing initial reference loading cap')
+    if 'Start with at most three references' not in router or '**C4 procedure first**' not in router:
+        errors.append('C4 must be first within reference loading cap')
     structural = root / 'references/engineering/00-structural-analysis.md'
     if structural in documents and re.search(r'^## (?:\d+\.|Required output)', documents[structural], re.M):
         errors.append('Structural analysis must provide techniques, not a second workflow/report')

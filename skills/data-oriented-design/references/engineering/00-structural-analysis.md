@@ -11,9 +11,15 @@ Before any repository-code architecture, cleanup, implementation or optimization
 - **L3 — Component:** components **inside every first-party container** and directed dependencies/calls. Expand Controller → Service → Repository, SOLID-style interfaces with one implementation, DI factories/composition roots, DTO/Mapper/ViewModel hops, adapters and duplicated semantic layers. Split into multiple connected diagrams when needed for readability; do not conceal chains inside generic boxes.
 - **L4 — Code/data path:** typed operations and data for the affected path only, including inputs/outputs, ownership, allocation/lifetime, retained representations and pointer/ID/range links.
 
-Use C4 diagrams or Mermaid with explicit boundaries, directed labeled edges and consistent names. Differentiate DI construction from runtime invocation and data movement. Attach representative source locations to nodes/edges, mark unverified links `UNKNOWN`, and **do not invent** graph edges. If current code cannot establish a complete system-wide L1–L3, state the missing scope and **block design selection**; never silently substitute a local graph.
+Use C4 diagrams or Mermaid with explicit boundaries, directed labeled edges and consistent names. Distinguish DI construction, invocation and data movement. Ground node/edge labels in source locations; mark uncertain links `UNKNOWN` rather than inventing them. Missing coverage **blocks design selection**; an affected-path graph cannot substitute for complete L1–L3.
 
 Annotate SOLID/DI indirection, delegation-only layers, redundant DTO conversions, duplicate owned state, per-object heap/lock graphs as `CANDIDATE` on the **as-is** map. A visible layer is not yet a proven defect: only the subsequent physical-operation derivation, necessity test and correctness/constraint checks can justify deleting or keeping it. Reuse a previous diagram only after checking its repository revision and affected entrypoints/wiring.
+
+### C4 coverage gate
+
+Before declaring C4 complete, create a concise **coverage ledger** for the inspected commit: inventory (a) entrypoints and deployables, (b) first-party stores and external interfaces, (c) every first-party container's composition root or construction path and (d) corresponding L2/L3 nodes, edges and source locations. Follow DI registration and production callers to their implementations, including single-implementation traits and DTO mappings. Compare the ledger with the diagrams. **Omitted runtime unit, unchecked composition root, hidden first-party layer or ungrounded edge → C4 INCOMPLETE; do not select a design or code change.** `UNKNOWN` does not count as coverage. An existing diagram passes only after rechecking revision and affected wiring.
+
+For structural redesign, draw **to-be C4 L2/L3 and affected L4** after deriving operations and physical data. Compare current and target nodes, delegation edges, owned representations and data paths. Every retained or new separate layer requires a necessity proof; renamed old boxes fail.
 
 ### Example: expose a delegation chain at L3
 

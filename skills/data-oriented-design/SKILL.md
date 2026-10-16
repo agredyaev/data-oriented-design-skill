@@ -17,7 +17,7 @@ For architecture or structural cleanup, derive a **DOD/PWP target from computati
 
 ## Mandatory DOD preflight
 
-**Gate 0 — draw as-is C4 before any repository-code decision.** Inspect the full system; render C4 **L1 context, L2 all runtime containers/stores, L3 components inside each first-party container**, exposing Controller/Service/Repository chains, DI wiring, interface implementations and DTO mappings. Add **L4 typed data/operation flow** for the affected path. The drawings must contain real, directed connections grounded in code, not just boxes or a file tree. Follow the [mandatory C4 procedure](references/engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight). Label suspicious SOLID/DI/delegation layers as *candidates*, never proven defects. An outdated/unverified map or unavailable evidence blocks architectural decisions. Required for scoped fixes, cleanup and profiler-led code changes too; conceptual questions without a repository are exempt.
+**Gate 0 — draw as-is C4 before any repository-code decision.** First read the [C4 procedure](references/engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight). Draw the complete L1 context, L2 runtime units/stores and L3 components including real DI/delegation/DTO edges; expand affected L4 typed data flow. Pass the C4 coverage gate against source entrypoints, composition roots and repository revision. Partial, box-only or unverified diagrams fail. Flag suspicious SOLID/DI layers as candidates, not proven defects. No route, KEEP/REMOVE or code decision before verified C4, including scoped fixes and profiling. Purely conceptual questions without code are exempt.
 
 After C4, before proposing a target for architecture, redesign, structural cleanup, data-model, ownership or performance-change work, establish in order: **required operation → exact reads/writes → multiplicity/access pattern → physical data path/layout → retained state → ownership/lifetime/correctness boundaries**. Do not propose target types, layers or abstractions before these facts. Mark missing facts `UNKNOWN`; resolve those blocking a target choice.
 
@@ -25,22 +25,22 @@ Current layers are evidence, never target-design primitives. Restart a target ba
 
 ### Structural-route override
 
-**Apply after Gate 0, before any task-mode or Engineering routing row.** Architecture redesign always uses the structural route. For architecture/structural cleanup, Controller → Service → Repository delegation, DTO/Mapper/ViewModel hops, DI service graphs, domain-object graphs, per-entity heap ownership, one-implementation architectural traits or repeated DTO/transport conversions also force [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) + [Data shape](references/engineering/01-data-shape.md). Do **not** accept YAGNI-only cleanup. Use YAGNI only after deriving the target. Focused local fixes/questions and profiler diagnosis remain scoped until they require a structural target.
+**Apply after Gate 0, before task-mode or Engineering routing.** Architecture redesign uses the structural route. Any Controller → Service → Repository delegation, redundant DTO/Mapper chain, DI graph, one-implementation trait or per-entity pointer ownership exposed by C4 **on the affected path** requires [Transformation](references/engineering/10-oop-to-dod.md) necessity analysis before local cleanup, a scoped fix or hotspot optimization. Do **not** accept YAGNI-only cleanup. Implement only requested scope; report unremoved related layers as PARTIAL rather than proving them necessary. Unrelated C4 candidates need no immediate rewrite.
 
 ## Choose the task mode
 
 | Task | First read | Add only when needed |
 | --- | --- | --- |
-| Architecture redesign or structural cleanup with OOP/layer signals | [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) + [Data shape](references/engineering/01-data-shape.md) | correctness or measurement for disputed decisions |
+| Architecture redesign or scoped change touching C4 structural candidates | [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) | [Data shape](references/engineering/01-data-shape.md), correctness or measurement when needed |
 | Performance diagnosis or profiler hotspots | [module composition](references/modules.md) + [performance diagnosis](references/performance/00-diagnosis.md) | selected rule pack; structural route for shared causes |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
 | Scoped implementation without structural redesign | matching engineering block + [workflow verification](references/workflow.md#8-verify-proportionally) | only missing contract/ownership inputs |
 | Focused question or supplied design candidate | matching engineering block | correctness/measurement when needed |
 | Local YAGNI cleanup **only after structural override check** | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow if code changes |
 
-After C4, requested scope takes precedence: a focused compiler/performance question stays focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
+After C4 and affected-path necessity analysis, requested scope controls implementation; focused compiler/performance questions stay focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
 
-Start with at most three references after this router. Load more for missing inputs or necessary correctness checks.
+Start with at most three references after this router: **C4 procedure first**, then at most two task-specific modules. Load more as needed; the cap never skips C4.
 
 ## Engineering routing
 

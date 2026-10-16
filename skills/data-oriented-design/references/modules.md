@@ -1,6 +1,6 @@
 # Module Composition
 
-Before selecting any module for repository-code work, render or verify [system-wide as-is C4 L1–L3](engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight) and affected L4. Focused routing is **not** an exemption from C4. Modules are independent after that gate; purely conceptual questions without a repository need no diagram.
+Before selecting any module for repository-code work, first read and verify [system-wide as-is C4 L1–L3](engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight), including its coverage ledger and affected L4. Focused routing is **not** exempt. If C4 flags structural candidates on the affected path, perform [Transformation](engineering/10-oop-to-dod.md) necessity analysis before local cleanup or profiler optimization; implementation remains in user scope. Purely conceptual questions without code need no C4.
 
 ## Module contracts
 
@@ -23,7 +23,7 @@ Before selecting any module for repository-code work, render or verify [system-w
 
 ## Composition rules
 
-1. Complete as-is C4, then apply structural override before selecting modules. After that select the smallest module set; focused ownership work does not require full redesign.
+1. Prove whole-system C4 coverage, inspect affected-path candidates, then apply structural override. Only afterward select the smallest module set; implementation stays within requested scope.
 2. Check minimum inputs. Reuse matching code/evidence; inspect or obtain only missing inputs. Do not rerun a module merely to satisfy order.
 3. Carry results forward with the same scope, version, identity, and units. Recheck evidence only when a dependency changes or validity is uncertain.
 4. An unresolved prerequisite blocks only dependent decisions. Continue independent analysis and label the affected result `UNKNOWN` or `UNVERIFIED`.
@@ -33,17 +33,17 @@ Before selecting any module for repository-code work, render or verify [system-w
 
 ## Choose and switch routes
 
-**Route priority (after system-wide C4):** for architecture redesign or structural cleanup with OOP/layer signals, derive a minimal operation-first DOD/PWP target before local YAGNI. Apply the structural override before choosing a focused cleanup module. Focused questions and profiler-led diagnosis remain scoped.
+**Route priority (after verified C4):** architecture redesign and affected-path OOP/layer candidates require operation-first DOD/PWP necessity analysis before YAGNI or profiler optimization. Apply the structural override before choosing a focused cleanup module. Focused questions and profiler-led diagnosis remain scoped.
 
 | Situation | Start | Next decision |
 | --- | --- | --- |
-| architecture redesign or structural cleanup with OOP/layer signals | structural route | derive operation/access/layout first; remove or justify old layers against the target |
+| architecture redesign or affected-path C4 structural candidates | structural necessity route | derive operation/access/layout; remove or independently justify layers against the target |
 | performance target but missing/unreliable profile | performance diagnosis | establish matched baseline and relevant attribution before choosing a transformation |
 | trusted profile identifies target cost | profiler route | rank measured hotspots and iterate the most relevant actionable cause |
 | one focused question or supplied candidate | individual module | consume its minimum inputs and stop with its result |
 | evidence insufficient to choose | smallest missing-input module | inspect the affected path or measure; do not invent a ranking |
 
-**Structural route:** as-is C4 L1–L3 → affected L4 and contract/process/data evidence → physical operation/access/layout → element necessity → target operations/passes/owned representations → old-to-target comparison → Implementation/Correctness → Experiment when claiming a cost improvement. For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md); existing internal callers do not prescribe the target architecture. A measurement can occur anywhere a design choice requires it.
+**Structural route:** verified as-is C4 L1–L3 → affected L4 and contract/process/data → physical operation/access/layout → element necessity → target passes/stores → to-be C4 L2–L3 and affected L4 → old-to-target comparison → Implementation/Correctness → Experiment when claiming a cost improvement. For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md); existing internal callers do not prescribe the target architecture. A measurement can occur anywhere a design choice requires it.
 
 A profile is usable when its workload, build, metric, and scope match the target and the measurement method is checked. If they do not match, obtain the missing evidence. A CPU-sample profile alone does not attribute blocked wall time or retained memory.
 

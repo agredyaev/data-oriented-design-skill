@@ -21,6 +21,8 @@ Derive the target strictly in this order:
 
 Do not name proposed Services, Repositories, DTOs, Mappers, Managers, Controllers, Factories, ViewModels or architectural interfaces before step 8. Do not carry a current element into the target unless its responsibility and separate form are independently required by the derived operation/data path. Otherwise restart from step 1.
 
+For a structural transformation, produce [to-be C4 L2/L3 and affected L4](00-structural-analysis.md#c4-coverage-gate) only after deriving the operations/data/layout; use it to verify removal of old dependency edges, not to relabel old boxes.
+
 Choose AoS/SoA and mutable/frozen state by real access, not fashion. Prefer root-owned stores and typed IDs/offsets/ranges for retained internal relationships; local borrows and external resource handles have distinct lifetime contracts. DOD does not mandate SoA or freezing.
 
 ### Invalid candidate gate

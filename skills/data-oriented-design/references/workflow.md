@@ -25,7 +25,7 @@ Unknown requirements are `UNKNOWN`. Do not invent them.
 
 ## 2. Draw the as-is C4 system and current process/data
 
-**Before route or design decisions**, render L1 for the complete system, L2 for all runtime containers/stores, and L3 for every first-party container, including all material DI/delegation and DTO-conversion chains. Add affected L4 typed operations/data flow. Follow the [mandatory C4 procedure](engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight). Do not hide Controller → Service → Repository chains in a generic box or invent edges.
+**Before route or design decisions**, render L1 for the whole system, L2 for all runtime units/stores and L3 for each first-party container, including DI/delegation/DTO chains; add affected L4. Pass the [C4 coverage gate](engineering/00-structural-analysis.md#c4-coverage-gate) against entrypoints, composition roots, code locations and inspected commit. Omitted/unverified first-party links mean `C4 INCOMPLETE`, not permission to choose a local path.
 
 After the complete system map, detail only the affected input-to-output process using a typed table or Mermaid. See [Mapping techniques](engineering/00-structural-analysis.md).
 
@@ -97,7 +97,7 @@ Do not require documentation for elements already obvious from the code and cont
 
 ## 5. Design the replacement from the contract
 
-Use the physical data path from step 3 to derive explicit passes/owned stores; only now name target types and modules. For object-based code, apply [OOP → DOD/PWP](engineering/10-oop-to-dod.md).
+Use physical data from step 3 to derive explicit passes/owned stores; only now name target types/modules. For structural changes, draw **to-be C4 L2/L3 and affected L4**, identifying removed, merged and justified old layers. For object-based code, apply [OOP → DOD/PWP](engineering/10-oop-to-dod.md).
 
 For a cost claim, establish baseline and cause through [Diagnosis](performance/00-diagnosis.md). Without measurements, a concrete proposal remains `UNVERIFIED`.
 
@@ -111,7 +111,7 @@ Refine with selected DOD rules. Every new element also needs the necessity test.
 
 Compare only metrics relevant to the task.
 
-For a structural delta, compare current/candidate steps, passes, retained representations/bytes, allocations, pointer/key lookups, parse/normalize operations, copies, locks/refcounts and protocol round-trips. Include only changed or disputed counts.
+For structural delta compare as-is/to-be C4 nodes, dependency edges and surviving layers with their necessity proof; then compare passes, retained representations/bytes, allocations, pointer/key lookups, parse/normalize, copies, locks and round-trips. Include only changed/disputed counts.
 
 Use `?` when unknown.
 
@@ -161,6 +161,7 @@ Apply these gates to the selected scope. Analysis-only work completes with its c
 - the required contract still holds;
 - every added element has a concrete responsibility;
 - removed elements have no remaining required consumer;
+- structural redesign includes grounded to-be C4 and the as-is → to-be layer/edge delta;
 - a requested OOP → DOD/PWP conversion implements the target operations, owners and relationships; name partial scope or blockers explicitly;
 - new construction, update, lifetime and identity obligations are accounted for;
 - any performance claim has matched evidence;
@@ -174,7 +175,7 @@ For a full architecture/performance redesign, use one compact report:
 
 1. **As-is C4** — L1–L3 whole-system diagrams, plus affected L4 path.
 2. **Contract** — required behavior and relevant bounds.
-3. **Current → candidate** — typed process/data maps; combine them when readable.
+3. **Current → candidate** — as-is/to-be C4 delta and typed process/data maps.
 4. **Decisions and delta** — changed/disputed elements and trade-offs.
 5. **Verification and result** — behavior evidence; matched metrics for cost claims.
 6. **Unknowns** — missing evidence, rejected candidates, or relevant defects.

@@ -42,6 +42,26 @@ class ValidateSkillTests(unittest.TestCase):
                                                 '**Unexplained acronym:**', 1))
         self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
 
+    def test_c4_first_reference(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('**C4 procedure first**', 'optional C4', 1))
+        self.assert_invalid('C4 must be first within reference loading cap')
+
+    def test_c4_coverage_gate(self):
+        path = self.skill / 'references/engineering/00-structural-analysis.md'
+        path.write_text(path.read_text().replace('### C4 coverage gate', '### Informal review', 1))
+        self.assert_invalid('Missing mandatory C4 definition: ### C4 coverage gate')
+
+    def test_affected_candidate_must_override_focused_route(self):
+        path = self.skill / 'references/modules.md'
+        path.write_text(path.read_text().replace('If C4 flags structural candidates on the affected path', 'If preferred', 1))
+        self.assert_invalid('Affected-path structural candidates must override focused routing')
+
+    def test_to_be_c4_required(self):
+        path = self.skill / 'references/workflow.md'
+        path.write_text(path.read_text().replace('to-be C4 L2/L3', 'revised diagram'))
+        self.assert_invalid('Structural redesign must include to-be C4')
+
     def test_missing_c4_gate(self):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('**Gate 0 — draw as-is C4', '**Optional C4', 1))
