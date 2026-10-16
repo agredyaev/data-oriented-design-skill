@@ -395,7 +395,7 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'references/broad-redesign.md'
         text = path.read_text()
         path.write_text(text.replace(
-            '**Delete / Target exceptions**',
+            '**Delete / External exceptions**',
             '**Delete / Keep**',
         ))
         self.assert_invalid('Broad redesign contains stale preservation wording')
@@ -416,7 +416,7 @@ class ValidateSkillTests(unittest.TestCase):
             'Broad redesign may serialize only at a real external boundary; internal DTO/conversion chains are deleted.',
             'Broad redesign keeps the conversion.',
         ))
-        self.assert_invalid('YAGNI conversion guidance must distinguish focused keep from broad re-derivation')
+        self.assert_invalid('YAGNI conversion guidance must distinguish focused keep from broad internal-layer deletion')
 
 
     def test_broad_cannot_fallback_to_rederived_mutex(self):
