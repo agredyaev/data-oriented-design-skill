@@ -6,7 +6,7 @@ Decisions: [responsibility versus representation](#decision-tree-responsibility-
 
 ## Mandatory target derivation order
 
-Establish required outputs, errors, ordering, input bounds, external interfaces, authority checks and resource lifetimes. Inspect current code for behavior and costs, never as a template for target architecture.
+After the [mandatory system-wide as-is C4](00-structural-analysis.md#mandatory-c4-as-is-preflight) has exposed current layers and wiring, establish required outputs, errors, ordering, input bounds, external interfaces, authority checks and resource lifetimes. Current architecture is evidence, never the target template.
 
 Derive the target strictly in this order:
 

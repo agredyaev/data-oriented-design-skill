@@ -6,7 +6,7 @@ The skill uses progressive disclosure. The skill router routes each task to the 
 
 ## Core workflow
 
-The [structural workflow](skills/data-oriented-design/references/workflow.md) follows: contract → current process/data map → **physical operation/access/layout** → element necessity → target passes/stores → comparison → implementation → verification. Architecture cleanup with OOP/layer signals cannot stop at YAGNI-only cleanup; the target is derived independently of current layers.
+The [structural workflow](skills/data-oriented-design/references/workflow.md) follows: mandatory system-wide as-is C4 L1–L3 → affected L4/contract/data path → **physical operation/access/layout** → element necessity → target passes/stores → comparison → implementation → verification. Architecture cleanup with OOP/layer signals cannot stop at YAGNI-only cleanup; the target is derived independently of current layers.
 
 For profiler-led optimization, rank measured costs against the target, select an actionable cause, test one change, then reprofile and rerank. Switch to structural analysis for shared causes or ineffective local tuning. Individual modules can also run alone when their inputs are available.
 

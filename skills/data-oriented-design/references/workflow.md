@@ -1,8 +1,6 @@
 # Data-Oriented Design Workflow
 
-Use [Module composition](modules.md) for scoped modules or profiler execution. The steps below describe a full structural redesign; verification/reporting apply to any route. Reuse evidence, execute missing prerequisites only, and do not claim skipped verification passed.
-
-For a local fix with no representation, ownership, or boundary change, state affected behavior, make the fix, and verify it. No process map is required.
+Every repository-code decision requires the **system-wide as-is C4** under [C4 preflight](engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight) before selecting candidates or modules. This includes local fixes and profiler-led proposals; a reused map must match the actual code. Only factual inventory/contract discovery may precede it. Then follow [Module composition](modules.md) for scoped work or the structural steps below. Reuse valid evidence without claiming skipped verification passed.
 
 ## 1. Fix the contract
 
@@ -25,9 +23,11 @@ Record only requirements that constrain the design:
 
 Unknown requirements are `UNKNOWN`. Do not invent them.
 
-## 2. Draw the current process and data
+## 2. Draw the as-is C4 system and current process/data
 
-Map only the affected input-to-output process using a typed table or Mermaid. For notation and counting examples, use [Mapping techniques](engineering/00-structural-analysis.md).
+**Before route or design decisions**, render L1 for the complete system, L2 for all runtime containers/stores, and L3 for every first-party container, including all material DI/delegation and DTO-conversion chains. Add affected L4 typed operations/data flow. Follow the [mandatory C4 procedure](engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight). Do not hide Controller → Service → Repository chains in a generic box or invent edges.
+
+After the complete system map, detail only the affected input-to-output process using a typed table or Mermaid. See [Mapping techniques](engineering/00-structural-analysis.md).
 
 Each operation needs input/output types, read/write state, and known call count. Annotate relevant items, bytes, allocations, lookups, parse/normalize/copy/serialize work, locks/refcounts, IPC/syscalls and state transitions. Do not invent unknown counts.
 
@@ -168,15 +168,16 @@ Apply these gates to the selected scope. Analysis-only work completes with its c
 
 ## Proportional result format
 
-For a local fix, report the change, affected behavior, verification, and any unresolved issue. No structural report is required.
+For any repository-code change, present or link the verified as-is C4 L1–L3 before the decision, then report the affected behavior and verification. Local fixes do not require unrelated L4 expansion.
 
 For a full architecture/performance redesign, use one compact report:
 
-1. **Contract** — required behavior and relevant bounds.
-2. **Current → candidate** — typed process/data maps; combine them when this remains readable.
-3. **Decisions and delta** — only changed or disputed elements, relevant counts, and trade-offs.
-4. **Verification and result** — behavior evidence; matched measurements for the claimed metric.
-5. **Unknowns** — missing evidence, rejected candidates, or remaining defects that affect the decision.
+1. **As-is C4** — L1–L3 whole-system diagrams, plus affected L4 path.
+2. **Contract** — required behavior and relevant bounds.
+3. **Current → candidate** — typed process/data maps; combine them when readable.
+4. **Decisions and delta** — changed/disputed elements and trade-offs.
+5. **Verification and result** — behavior evidence; matched metrics for cost claims.
+6. **Unknowns** — missing evidence, rejected candidates, or relevant defects.
 
 Use `FINDING` for a supported issue/result, `UNVERIFIED` for an unsupported claim, `NO FINDING` when the inspected scope yields no supported issue, or `OUTSIDE DOD` when the cause needs another method. Name the scope and next diagnostic action for the latter; it does not mean the user's problem is solved. Attach rule IDs only when they explain a decision. Removing a named unnecessary layer may be accepted as structural simplification from code and behavior evidence.
 

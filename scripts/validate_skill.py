@@ -16,7 +16,7 @@ REQUIRED = (
     'references/performance-methodology.md',
 )
 # Limits keep the always-loaded router small and stop rule packs becoming routers.
-LIMITS = {'SKILL.md': 8100, 'references/workflow.md': 11500,
+LIMITS = {'SKILL.md': 9100, 'references/workflow.md': 12500,
           'references/performance-methodology.md': 5000,
           'references/engineering/09-wide-pointerless-compiler.md': 5000}
 
@@ -165,6 +165,9 @@ def validate(repo):
     dod = router.find('**DOD (Data-Oriented Design):**')
     pwp = router.find('**PWP (Programming Without Pointers):**')
     preflight = router.find('## Mandatory DOD preflight')
+    c4_gate = router.find('**Gate 0 — draw as-is C4')
+    if not (0 <= preflight < c4_gate < router.find('### Structural-route override')):
+        errors.append('Mandatory C4 Gate 0 must precede route selection')
     override = router.find('### Structural-route override')
     routing = router.find('## Choose the task mode')
     if not (0 <= goal < dod < pwp < preflight < override < routing):
@@ -179,7 +182,16 @@ def validate(repo):
     eng_yagni = router.find('| Local wrappers, traits, DTO/DI cleanup **after structural override** |')
     if eng_start < 0 or eng_yagni < eng_start:
         errors.append('Engineering YAGNI routing must follow structural override')
+    c4_ref = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
+    for tag in ('## Mandatory C4 as-is preflight', '**L1', '**L2', '**L3', '**L4', 'CANDIDATE'):
+        if tag not in c4_ref:
+            errors.append(f'Missing mandatory C4 definition: {tag}')
+    modules = documents.get(root / 'references/modules.md', '')
+    if 'Before selecting any module for repository-code work' not in modules:
+        errors.append('C4 must precede focused module routing')
     workflow = documents.get(root / 'references/workflow.md', '')
+    if '## 2. Draw the as-is C4 system and current process/data' not in workflow:
+        errors.append('Workflow step 2 must draw C4')
     step_titles = re.findall(r'^## ([1-8])[.] ', workflow, re.M)
     if step_titles != list('12345678') or '## 3. Derive the physical operation shape' not in workflow:
         errors.append('Workflow must derive physical operation shape before necessity and target design')

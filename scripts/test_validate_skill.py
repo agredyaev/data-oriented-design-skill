@@ -42,6 +42,28 @@ class ValidateSkillTests(unittest.TestCase):
                                                 '**Unexplained acronym:**', 1))
         self.assert_invalid('Primary DOD/PWP definitions, preflight and structural override')
 
+    def test_missing_c4_gate(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('**Gate 0 — draw as-is C4', '**Optional C4', 1))
+        self.assert_invalid('Mandatory C4 Gate 0')
+
+    def test_missing_c4_level(self):
+        path = self.skill / 'references/engineering/00-structural-analysis.md'
+        path.write_text(path.read_text().replace('**L3', '**Part of system', 1))
+        self.assert_invalid('Missing mandatory C4 definition: **L3')
+
+    def test_workflow_skips_c4(self):
+        path = self.skill / 'references/workflow.md'
+        path.write_text(path.read_text().replace('## 2. Draw the as-is C4 system and current process/data',
+                                                '## 2. Draw affected process', 1))
+        self.assert_invalid('Workflow step 2 must draw C4')
+
+    def test_module_skips_c4(self):
+        path = self.skill / 'references/modules.md'
+        path.write_text(path.read_text().replace('Before selecting any module for repository-code work',
+                                                'Optional for module work', 1))
+        self.assert_invalid('C4 must precede focused module routing')
+
     def test_missing_mandatory_preflight(self):
         path = self.skill / 'SKILL.md'
         path.write_text(path.read_text().replace('## Mandatory DOD preflight',

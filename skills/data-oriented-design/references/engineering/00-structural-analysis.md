@@ -1,10 +1,38 @@
 # Structural Analysis Techniques
 
-Use the selected techniques for a non-trivial architecture or performance path. Follow [Module composition](../modules.md) for inputs/dependencies and [Workflow](../workflow.md) for the default full route, element-necessity test, completion, and reporting. A mapping-only task can stop with the map. This file does not add another sequence or report.
+This file defines the mandatory **as-is C4 preflight** and provides mapping techniques. Follow [Workflow](../workflow.md) for target derivation, necessity tests and verification. C4 records what exists; its boxes are **not** target architecture requirements.
+
+## Mandatory C4 as-is preflight
+
+Before any repository-code architecture, cleanup, implementation or optimization decision, **draw the whole current system**. Inspect actual source: bootstraps, deployables, entrypoints, dependency wiring, constructors, call sites, storage, ownership and external interfaces. No design candidate, `KEEP`, `REMOVE`, tuning choice or module route is decided until the map is available and grounded.
+
+- **L1 — System Context:** whole system, users/actors, external systems, real interactions.
+- **L2 — Container:** all first-party deployables/processes and datastores and their actual connections/protocols. A C4 container is **not** an internal Service/Repository class.
+- **L3 — Component:** components **inside every first-party container** and directed dependencies/calls. Expand Controller → Service → Repository, SOLID-style interfaces with one implementation, DI factories/composition roots, DTO/Mapper/ViewModel hops, adapters and duplicated semantic layers. Split into multiple connected diagrams when needed for readability; do not conceal chains inside generic boxes.
+- **L4 — Code/data path:** typed operations and data for the affected path only, including inputs/outputs, ownership, allocation/lifetime, retained representations and pointer/ID/range links.
+
+Use C4 diagrams or Mermaid with explicit boundaries, directed labeled edges and consistent names. Differentiate DI construction from runtime invocation and data movement. Attach representative source locations to nodes/edges, mark unverified links `UNKNOWN`, and **do not invent** graph edges. If current code cannot establish a complete system-wide L1–L3, state the missing scope and **block design selection**; never silently substitute a local graph.
+
+Annotate SOLID/DI indirection, delegation-only layers, redundant DTO conversions, duplicate owned state, per-object heap/lock graphs as `CANDIDATE` on the **as-is** map. A visible layer is not yet a proven defect: only the subsequent physical-operation derivation, necessity test and correctness/constraint checks can justify deleting or keeping it. Reuse a previous diagram only after checking its repository revision and affected entrypoints/wiring.
+
+### Example: expose a delegation chain at L3
+
+```mermaid
+flowchart LR
+  subgraph app["API container / components"]
+    C["Controller"] -->|calls| S["Service"]
+    S -->|calls| I["Repository interface"]
+    I -->|implemented by| R["Repository"]
+    DI["Composition root"] -.->|injects| I
+  end
+  R -->|reads/writes| DB[("Database container")]
+```
+
+This illustrates what to **show**, not what to preserve. Draw actual L1–L3 for the repository before making a design decision.
 
 ## Typed process maps
 
-Map the affected input-to-output path, including a boundary when it constrains the design. Exclude unrelated repository components.
+After the whole-system C4, map the affected input-to-output path in typed detail. Unrelated L4 code stays collapsed at its C4 boundary.
 
 Every operation must name:
 
@@ -91,7 +119,7 @@ Name exact types and identify which old steps/state disappear. A root-owned targ
 
 Prefer a candidate that preserves the contract, removes recurring work/state, and adds fewer invariants. A lower step count alone cannot justify weaker validation, authorization, diagnostics, recovery, ordering, or compatibility.
 
-When the trade-off depends on cost, mark the candidate `UNVERIFIED` and name the smallest measurement that decides it. Use detailed rule packs to refine the selected candidate. In the profiler route, inspect the affected hotspot fragment first; a full structural map is required only when the selected change or shared cause needs it. Baseline measurement and diagnosis may happen before structural work.
+When the trade-off depends on cost, mark the candidate `UNVERIFIED` and name the smallest measurement that decides it. Use detailed rule packs to refine the selected candidate. In the profiler route, retain the full C4 overview and inspect only the affected L4 hotspot fragment; detailed structural expansion is needed only for the selected/shared cause. Baseline measurement and diagnosis may happen before structural work.
 
 ## Escalation after ineffective tuning
 

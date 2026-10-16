@@ -17,13 +17,15 @@ For architecture or structural cleanup, derive a **DOD/PWP target from computati
 
 ## Mandatory DOD preflight
 
-Before proposing a target for architecture, redesign, structural cleanup, data-model, ownership or performance-change work, establish in order: **required operation → exact reads/writes → multiplicity/access pattern → physical data path/layout → retained state → ownership/lifetime/correctness boundaries**. Do not propose target types, layers or abstractions before these facts. Mark missing facts `UNKNOWN`; resolve those blocking a target choice.
+**Gate 0 — draw as-is C4 before any repository-code decision.** Inspect the full system; render C4 **L1 context, L2 all runtime containers/stores, L3 components inside each first-party container**, exposing Controller/Service/Repository chains, DI wiring, interface implementations and DTO mappings. Add **L4 typed data/operation flow** for the affected path. The drawings must contain real, directed connections grounded in code, not just boxes or a file tree. Follow the [mandatory C4 procedure](references/engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight). Label suspicious SOLID/DI/delegation layers as *candidates*, never proven defects. An outdated/unverified map or unavailable evidence blocks architectural decisions. Required for scoped fixes, cleanup and profiler-led code changes too; conceptual questions without a repository are exempt.
 
-Current layers are evidence, never target-design primitives. If a target starts from old architecture boxes, restart from operations and data. Focused fixes/questions and profiler diagnosis stay scoped.
+After C4, before proposing a target for architecture, redesign, structural cleanup, data-model, ownership or performance-change work, establish in order: **required operation → exact reads/writes → multiplicity/access pattern → physical data path/layout → retained state → ownership/lifetime/correctness boundaries**. Do not propose target types, layers or abstractions before these facts. Mark missing facts `UNKNOWN`; resolve those blocking a target choice.
+
+Current layers are evidence, never target-design primitives. Restart a target based on old architecture boxes. Focused tasks stay scoped **after C4**.
 
 ### Structural-route override
 
-**Apply this before selecting a task-mode row or an Engineering routing row.** Architecture redesign always uses the structural route. For architecture/structural cleanup, Controller → Service → Repository delegation, DTO/Mapper/ViewModel hops, DI service graphs, domain-object graphs, per-entity heap ownership, one-implementation architectural traits or repeated DTO/transport conversions also force [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) + [Data shape](references/engineering/01-data-shape.md). Do **not** accept YAGNI-only cleanup. Use YAGNI only after deriving the target. Focused local fixes/questions and profiler diagnosis remain scoped until they require a structural target.
+**Apply after Gate 0, before any task-mode or Engineering routing row.** Architecture redesign always uses the structural route. For architecture/structural cleanup, Controller → Service → Repository delegation, DTO/Mapper/ViewModel hops, DI service graphs, domain-object graphs, per-entity heap ownership, one-implementation architectural traits or repeated DTO/transport conversions also force [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) + [Data shape](references/engineering/01-data-shape.md). Do **not** accept YAGNI-only cleanup. Use YAGNI only after deriving the target. Focused local fixes/questions and profiler diagnosis remain scoped until they require a structural target.
 
 ## Choose the task mode
 
@@ -36,7 +38,7 @@ Current layers are evidence, never target-design primitives. If a target starts 
 | Focused question or supplied design candidate | matching engineering block | correctness/measurement when needed |
 | Local YAGNI cleanup **only after structural override check** | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow if code changes |
 
-Requested scope takes precedence: a focused compiler/performance question stays focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
+After C4, requested scope takes precedence: a focused compiler/performance question stays focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
 
 Start with at most three references after this router. Load more for missing inputs or necessary correctness checks.
 
@@ -72,7 +74,7 @@ Examples are illustrative, not measurements of the user's code. Compare construc
 
 ## Non-negotiable rules
 
-- Apply the [preflight](#mandatory-dod-preflight) before structural target design; required behavior does not justify its old layer.
+- Render the [system-wide C4](references/engineering/00-structural-analysis.md#mandatory-c4-as-is-preflight) before any repository-code decision, then apply the [preflight](#mandatory-dod-preflight) before target design.
 - Apply the [representation budget](references/engineering/02-canonical-and-derived.md#representation-budget) to new owned state, and test a mechanism's necessity before tuning it.
 - Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
 - Accept performance claims only from matched evidence; use the [progress and switching rule](references/modules.md#choose-and-switch-routes).
