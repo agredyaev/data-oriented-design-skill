@@ -4,23 +4,30 @@ Use this module when the requested result is a DOD/PWP redesign of an object-bas
 
 Decisions: [responsibility versus representation](#decision-tree-responsibility-versus-representation), [domain ownership](#decision-tree-replace-domain-object-ownership), [completion](#decision-tree-declare-the-transformation-result).
 
-## Inputs and target
+## Mandatory target derivation order
 
-Establish required outputs, errors, ordering, supported input bounds, external interfaces, authority checks and resource lifetimes. Inspect current code to discover behavior and costs. Current class names, service boundaries, internal callers and ownership graphs are implementation evidence, not requirements to reproduce.
+Establish required outputs, errors, ordering, input bounds, external interfaces, authority checks and resource lifetimes. Inspect current code for behavior and costs, never as a template for target architecture.
 
-Describe the target using concrete operations and their data before deciding which old classes survive:
+Derive the target strictly in this order:
 
-| Target part | State explicitly |
-| --- | --- |
-| Operations | input/output types, reads, writes, dependencies, effects and error order |
-| Owners | who allocates, mutates and releases each store; snapshot/request/resource lifetime |
-| Retained data | fields needed by those operations; canonical data versus indexes or scratch |
-| Relationships | identity domain, typed IDs/offsets/ranges, bounds and invalidation on deletion/move |
-| Boundaries | actual external resource/protocol or semantic checkpoint; required timing and failure behavior |
+1. Required observable operations and effects.
+2. Exact data read/written by each operation.
+3. Multiplicity, traversal, ordering and access/mutation patterns.
+4. Physical layout/data path: direct/streamed access, AoS/SoA, hot/cold split, sparse storage, IDs/ranges and scratch as justified.
+5. Retained versus transient data; owners and lifetimes.
+6. Mutation, synchronization and invalidation model.
+7. Required correctness, external protocol and semantic boundaries.
+8. Only then explicit passes/functions and module/type organization.
 
-Start from required computations over owned data. Allocate root-owned stores, express processing as explicit passes/functions, and represent retained internal relationships by values or IDs/offsets/ranges. Choose AoS/SoA and mutable/frozen storage from actual access and mutation; DOD does not require SoA or freezing every system. PWP applies to retained internal relationships; local borrows and pointers owned at an actual external resource boundary have different roles.
+Do not name proposed Services, Repositories, DTOs, Mappers, Managers, Controllers, Factories, ViewModels or architectural interfaces before step 8. Do not carry a current element into the target unless its responsibility and separate form are independently required by the derived operation/data path. Otherwise restart from step 1.
 
-Do not copy `Controller → Service → Repository` into the target and rename its boxes. A struct or method is not itself a defect; retained object topology, delegation and ownership must follow the target operations/data.
+Choose AoS/SoA and mutable/frozen state by real access, not fashion. Prefer root-owned stores and typed IDs/offsets/ranges for retained internal relationships; local borrows and external resource handles have distinct lifetime contracts. DOD does not mandate SoA or freezing.
+
+### Invalid candidate gate
+
+Treat these as **INVALID target candidates**, not merely cleanup smells: Entity → DTO → ViewModel or Row → Domain → DTO chains without independent semantics; Controller → Service → Repository delegation; pass-through managers/facades; one-implementation architectural interfaces; owned projections justified only by clean boundaries; or new layers before physical access/layout derivation.
+
+Only a separately established external, semantic, lifetime or correctness requirement can justify a specific extra boundary. Name that requirement, its direct-data alternative and why the alternative fails. Renaming an old mechanism, existing callers or testability alone never proves necessity.
 
 ## Decision tree: responsibility versus representation
 

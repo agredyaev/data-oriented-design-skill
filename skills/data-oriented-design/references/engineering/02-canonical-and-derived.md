@@ -2,6 +2,12 @@
 
 # 4. Canonical Data and Representation Rules
 
+## Representation budget
+
+Every additional **owned representation of the same semantic facts** is presumed unnecessary until a distinct requirement is demonstrated: different lifetime or physical access layout; independent authority/invariants; fixed wire/ABI/persistence compatibility; or a consumer that cannot use the canonical data via borrow, view, index, range or streaming.
+
+For each allowed copy/projection, identify its producer, consumer, lifetime, bytes/copy work and update/invalidation obligation. Labels such as "transport DTO", "domain DTO", "clean boundary", "separation of concerns", "testability", "repository abstraction", "smaller struct" or "only UI fields" are not evidence. An owned `CardListRow → CardDto` conversion fails unless a concrete independent boundary requires it.
+
 ## Rule DATA-01 — Keep one canonical representation
 
 Avoid multiple mutable or independently authoritative copies of the same domain state.
@@ -18,7 +24,7 @@ ManifestGraph
 
 when each duplicates the same information.
 
-Prefer one canonical representation plus indexes, ranges, or views.
+Prefer one canonical representation plus indexes, ranges, or views. Use the representation budget above for any separately owned copy.
 
 ### Better
 

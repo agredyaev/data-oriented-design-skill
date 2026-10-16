@@ -30,6 +30,24 @@ class ValidateSkillTests(unittest.TestCase):
     def test_current_skill(self):
         self.assertEqual(validate(self.repo), [])
 
+    def test_missing_mandatory_preflight(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('## Mandatory DOD preflight',
+                                                '## Optional design advice', 1))
+        self.assert_invalid('Mandatory DOD preflight must precede route selection')
+
+    def test_missing_structural_override(self):
+        path = self.skill / 'SKILL.md'
+        path.write_text(path.read_text().replace('### Structural-route override',
+                                                '### Local cleanup', 1))
+        self.assert_invalid('Missing structural route override')
+
+    def test_physical_step_removed(self):
+        path = self.skill / 'references/workflow.md'
+        path.write_text(path.read_text().replace('## 3. Derive the physical operation shape',
+                                                '## 3. Skip data analysis', 1))
+        self.assert_invalid('Workflow must derive physical operation shape')
+
     def test_broken_nested_markdown_link(self):
         self.append('references/engineering/09-wide-pointerless-compiler.md',
                     '[wrong](../../performance/00-diagnosis.md)')

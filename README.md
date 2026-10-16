@@ -6,15 +6,7 @@ The skill uses progressive disclosure. The skill router routes each task to the 
 
 ## Core workflow
 
-The full structural route is:
-
-1. define the contract;
-2. draw the current typed process and retained data;
-3. count passes, lookups, parsing, copies, allocations, synchronization, and duplicate state;
-4. derive target operations, owned stores and typed relationships from the contract;
-5. map old responsibilities to the target and remove superseded mechanisms;
-6. select the relevant DOD rules;
-7. validate correctness and the claimed physical/performance effect.
+The [structural workflow](skills/data-oriented-design/references/workflow.md) follows: contract → current process/data map → **physical operation/access/layout** → element necessity → target passes/stores → comparison → implementation → verification. Architecture cleanup with OOP/layer signals cannot stop at YAGNI-only cleanup; the target is derived independently of current layers.
 
 For profiler-led optimization, rank measured costs against the target, select an actionable cause, test one change, then reprofile and rerank. Switch to structural analysis for shared causes or ineffective local tuning. Individual modules can also run alone when their inputs are available.
 

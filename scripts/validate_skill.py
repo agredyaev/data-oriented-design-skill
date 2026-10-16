@@ -16,7 +16,7 @@ REQUIRED = (
     'references/performance-methodology.md',
 )
 # Limits keep the always-loaded router small and stop rule packs becoming routers.
-LIMITS = {'SKILL.md': 6500, 'references/workflow.md': 10000,
+LIMITS = {'SKILL.md': 8100, 'references/workflow.md': 11500,
           'references/performance-methodology.md': 5000,
           'references/engineering/09-wide-pointerless-compiler.md': 5000}
 
@@ -161,6 +161,22 @@ def validate(repo):
         for rule in sorted(set(re.findall(r'\bDOD-\d{3}\b', text)) - expected):
             errors.append(f'Unknown rule ID in {path.relative_to(root)}: {rule}')
     router = documents[entry]
+    preflight = router.find('## Mandatory DOD preflight')
+    routing = router.find('## Choose the task mode')
+    if preflight < 0 or preflight > routing:
+        errors.append('Mandatory DOD preflight must precede route selection')
+    if '### Structural-route override' not in router or 'Do **not** accept YAGNI-only cleanup' not in router:
+        errors.append('Missing structural route override')
+    workflow = documents.get(root / 'references/workflow.md', '')
+    step_titles = re.findall(r'^## ([1-8])[.] ', workflow, re.M)
+    if step_titles != list('12345678') or '## 3. Derive the physical operation shape' not in workflow:
+        errors.append('Workflow must derive physical operation shape before necessity and target design')
+    transformation = documents.get(root / 'references/engineering/10-oop-to-dod.md', '')
+    if '## Mandatory target derivation order' not in transformation or '### Invalid candidate gate' not in transformation:
+        errors.append('Missing OOP-to-DOD target derivation or invalid candidate gate')
+    representation = documents.get(root / 'references/engineering/02-canonical-and-derived.md', '')
+    if '## Representation budget' not in representation:
+        errors.append('Missing owned representation budget')
     if re.search(r'^\d+\. ', router, re.M):
         errors.append('SKILL.md must route to the workflow, not duplicate its numbered sequence')
     if 'Start with at most three references' not in router:

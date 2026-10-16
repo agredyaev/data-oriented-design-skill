@@ -9,21 +9,21 @@ Select capabilities by the result requested. Modules are independent instruction
 | Contract | clarify required behavior | task, consumers, external boundaries | required input/output, invariants, bounds, unknowns | [Contract](workflow.md#1-fix-the-contract) |
 | Process/data map | understand current transformations/state | affected code or a supplied design | typed operations, owners, lifetimes, consumers, known counts | [Mapping techniques](engineering/00-structural-analysis.md) |
 | OOP → DOD/PWP | redesign object-based execution and retained state | behavior contract, access/mutation, owners/lifetimes, current path | target passes/stores/typed relationships and old-to-target replacement map | [Transformation](engineering/10-oop-to-dod.md) |
-| Necessity | decide which element should exist | relevant element, contract/consumer, ownership/lifetime | KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH or MEASURE/UNKNOWN with reason | [Element test](workflow.md#3-apply-the-element-necessity-test) |
+| Necessity | decide which element should exist | relevant element, contract/consumer, ownership/lifetime | KEEP/REMOVE/MERGE/DERIVE/LOCALIZE/FLATTEN/BATCH or MEASURE/UNKNOWN with reason | [Element test](workflow.md#4-apply-the-element-necessity-test) |
 | Data representation | choose identity, relations, storage | relevant contract, access/mutation pattern, bounds/lifetime | candidate types and trade-offs; unknown costs remain unverified | [Data shape](engineering/01-data-shape.md), [Canonical state](engineering/02-canonical-and-derived.md) |
 | Ownership | evaluate sharing and synchronization | owners, lifetimes, concurrent access, FFI boundaries | ownership decision; required locks/handles retained | [Ownership](engineering/04-ownership-and-concurrency.md) |
 | Work elimination | remove repeated operations/layers | affected operations, consumers, frequency, required boundaries | proposed eliminated/merged work and preserved behavior | [Hot-path work](engineering/03-hot-path-work.md), [YAGNI](engineering/05-yagni-and-cleanup.md) |
 | Performance diagnosis | identify a cause before optimization | target, workload, baseline/profile or access to measure | bottleneck, causal hypothesis, missing evidence, selected rule family | [Diagnosis](performance/00-diagnosis.md) |
 | Experiment | evaluate a concrete cost claim | candidate/hypothesis, baseline, workload, acceptance rule | matched evidence and accepted/rejected/unverified claim | [Measurement](performance/01-measurement.md), [Acceptance](performance/10-foundation.md) |
 | Correctness | assess a proposed/implemented change | affected contract, code/design diff, relevant tests/oracle | preserved/violated invariants and missing verification | [Correctness boundaries](engineering/06-correctness-boundaries.md) |
-| Implementation | implement a justified candidate or experiment | scoped contract, concrete decision, affected code | changed code, superseded state removed, verification result | [Implementation](workflow.md#6-implement-one-structural-decision-at-a-time), [Verification](workflow.md#7-verify-proportionally) |
+| Implementation | implement a justified candidate or experiment | scoped contract, concrete decision, affected code | changed code, superseded state removed, verification result | [Implementation](workflow.md#7-implement-one-structural-decision-at-a-time), [Verification](workflow.md#8-verify-proportionally) |
 | PWP retained state | retained pointers, children, derived fields, builder lifetime | owners/lifetimes, mutation, consumers, affected contract | keep/replace decision and identity/lifetime checks | [PWP decisions](engineering/compiler/profile/50-pwp-retained-state.md) |
 | 512-byte / lexical profile | selected batch contract or measured lexical cause | grammar, source lifetime, backend targets; cost evidence for speed claims | selected mask/compaction/lookup technique and parity gates | [512 profile](engineering/compiler/25-pwp-512-profile.md) |
 | Compiler specialization | apply a compiler-specific decision | relevant pipeline, lexical, retained-state, or validation inputs | result of the selected compiler block | [Compiler router](engineering/09-wide-pointerless-compiler.md) |
 
 ## Composition rules
 
-1. Select the smallest module set that produces the requested result. “Analyze ownership” selects Ownership, not the entire redesign route.
+1. Select the smallest module set that produces the requested result. “Analyze ownership” selects Ownership, not the entire redesign route. Architecture/structural cleanup with OOP/layer signals cannot use standalone YAGNI.
 2. Check minimum inputs. Reuse matching code/evidence; inspect or obtain only missing inputs. Do not rerun a module merely to satisfy order.
 3. Carry results forward with the same scope, version, identity, and units. Recheck evidence only when a dependency changes or validity is uncertain.
 4. An unresolved prerequisite blocks only dependent decisions. Continue independent analysis and label the affected result `UNKNOWN` or `UNVERIFIED`.
@@ -33,7 +33,7 @@ Select capabilities by the result requested. Modules are independent instruction
 
 ## Choose and switch routes
 
-Select from the question and available evidence. Neither route takes precedence universally.
+Select from the question and available evidence. Structural architecture/cleanup signals override YAGNI-only, not profiler-led diagnosis.
 
 | Situation | Start | Next decision |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ Select from the question and available evidence. Neither route takes precedence 
 | one focused question or supplied candidate | individual module | consume its minimum inputs and stop with its result |
 | evidence insufficient to choose | smallest missing-input module | inspect the affected path or measure; do not invent a ranking |
 
-**Structural route:** Contract → current behavior/process/data evidence → target operations/owners/representations → necessity decisions and old-to-target comparison → Implementation/Correctness → Experiment when claiming a cost improvement. For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md); existing internal callers do not prescribe the target architecture. A measurement can occur anywhere a design choice requires it.
+**Structural route:** Contract → current behavior/process/data evidence → physical operation/access/layout → element necessity → target operations/passes/owned representations → old-to-target comparison → Implementation/Correctness → Experiment when claiming a cost improvement. For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md); existing internal callers do not prescribe the target architecture. A measurement can occur anywhere a design choice requires it.
 
 A profile is usable when its workload, build, metric, and scope match the target and the measurement method is checked. If they do not match, obtain the missing evidence. A CPU-sample profile alone does not attribute blocked wall time or retained memory.
 
@@ -76,7 +76,7 @@ After a change invalidates an earlier assumption, revisit only dependent decisio
 | “Verify this claimed speedup” | Experiment + Correctness; Diagnosis if causal evidence is missing | supported result class or explicit missing evidence; no forced rewrite |
 | “Latency is high; no profile yet” | Diagnosis → baseline and wall-time attribution | cause or missing evidence; no inferred SoA/512 rewrite |
 | “Use PWP for this frozen graph; there is no lexer” | PWP retained state → identity/lifetime checks | justified pointer/ID/range choice; no batch-width analysis |
-| “Convert this object subsystem to DOD/PWP” | Contract/current evidence → Transformation target → necessity/removal map → Implementation + Correctness | target passes/owners/typed relationships implemented; remaining constraints scoped; performance claims measured |
+| “Convert this object subsystem to DOD/PWP” | Contract/current evidence → physical operation/layout → Transformation target → necessity/removal map → Implementation + Correctness | target passes/owners/typed relationships implemented; remaining constraints scoped; performance claims measured |
 
 ## Extend a capability
 

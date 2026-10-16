@@ -9,17 +9,27 @@ Use this file as the entry router. Select one module or compose several by task 
 
 Reuse valid evidence and execute only missing work.
 
+## Mandatory DOD preflight
+
+Before proposing a target for architecture, redesign, structural cleanup, data-model, ownership or performance-change work, establish in order: **required operation → exact reads/writes → multiplicity/access pattern → physical data path/layout → retained state → ownership/lifetime/correctness boundaries**. Do not propose target types, layers or abstractions before these facts. Mark missing facts `UNKNOWN`; resolve those blocking a target choice.
+
+Current Services, Repositories, DTOs, Controllers, Mappers and object graphs are implementation evidence, not target-design primitives. If a target starts from those boxes, restart at operations and data. For a focused question, non-structural local fix or profiler diagnosis, inspect only the relevant scope; diagnose measured costs before selecting an optimization layout.
+
 ## Choose the task mode
 
 | Task | First read | Add only when needed |
 | --- | --- | --- |
 | Explain or answer one focused DOD question | the single matching engineering block below | examples |
 | Review one design choice or supplied candidate | matching engineering block | correctness or measurement when the conclusion depends on them |
-| Implement a scoped change | matching engineering block + [workflow verification](references/workflow.md#7-verify-proportionally) | only missing contract/ownership inputs; no mandatory full redesign |
+| Implement a scoped change | matching engineering block + [workflow verification](references/workflow.md#8-verify-proportionally) | only missing contract/ownership inputs; no mandatory full redesign |
 | Diagnose a performance problem or iterate profiler hotspots | [module composition](references/modules.md) + [performance diagnosis](references/performance/00-diagnosis.md) | matching rule pack; structural analysis for broad/shared causes or ineffective local tuning |
 | Redesign object/data architecture; OOP → DOD/PWP | [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) | mapping techniques or selected data/ownership block |
-| Cleanup/YAGNI review | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow when code will change |
+| Local YAGNI cleanup without structural OOP/layer signals | [YAGNI and cleanup](references/engineering/05-yagni-and-cleanup.md) | workflow when code will change |
 | Correctness-sensitive refactor | [correctness boundaries](references/engineering/06-correctness-boundaries.md) + [workflow](references/workflow.md) | matching ownership/data block |
+
+### Structural-route override
+
+For architecture or structural cleanup, if the affected path has Controller → Service → Repository delegation, DTO/Mapper/ViewModel hops, injected service graphs, domain-object graphs, per-entity heap ownership, one-implementation architectural traits or entity → DTO → transport conversions, use [Transformation](references/engineering/10-oop-to-dod.md) + [workflow](references/workflow.md) + [Data shape](references/engineering/01-data-shape.md). Do **not** accept YAGNI-only cleanup. Apply YAGNI to the derived target afterward. The focused/non-structural and profiler-diagnosis routes remain scoped until a structural target is proposed.
 
 Requested scope takes precedence: a focused compiler/performance question stays focused. A performance complaint without a trustworthy profile starts with Diagnosis; an explicit redesign starts with the structural route. For mixed work, use [route selection](references/modules.md#choose-and-switch-routes).
 
@@ -61,10 +71,8 @@ Examples are illustrative, not measurements of the user's code. Compare construc
 
 ## Non-negotiable rules
 
-- Establish the contract before changing representation, ownership, or boundaries.
-- For OOP → DOD/PWP, derive target operations and owned data before retaining old mechanisms. Required behavior does not justify its current object/layer.
-- Before a structural redesign, establish the affected typed process and retained data; reuse valid existing maps. A scoped module needs only its declared inputs.
-- Check whether the selected mechanism is necessary before tuning it; every added representation needs a named consumer and lifetime.
+- Apply the [preflight](#mandatory-dod-preflight) before structural target design; required behavior does not justify its old layer.
+- Apply the [representation budget](references/engineering/02-canonical-and-derived.md#representation-budget) to new owned state, and test a mechanism's necessity before tuning it.
 - Preserve required authorization, wire, migration, recovery, ordering, and independent-oracle boundaries.
 - Accept performance claims only from matched evidence; use the [progress and switching rule](references/modules.md#choose-and-switch-routes).
 - Report regressions, unknowns, missing measurements, and rejected candidates.

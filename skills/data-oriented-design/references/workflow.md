@@ -42,7 +42,22 @@ For each retained structure identify:
 
 Do not map unrelated parts of the repository.
 
-## 3. Apply the element-necessity test
+## 3. Derive the physical operation shape
+
+Before examining whether old abstractions survive, derive a physical data path for each relevant recurring operation:
+
+- exact fields/bytes read and written; item counts, frequency and traversal/order;
+- hot fields used together, cold fields skipped, retained versus request-local data;
+- parsing, hashing, lookup, copying, allocation and synchronization work;
+- direct access or no intermediate representation where possible; otherwise justify streaming, AoS, SoA, hot/cold split, sparse side storage, typed IDs, offsets/ranges or scratch arrays from the access/mutation pattern.
+
+Do not introduce target structs, services, repositories, DTOs, mappers or domain objects in this step. The result is an **operation/data/layout path**, not an architecture diagram.
+
+**Gate:** If the access pattern and plausible physical layout are not established, do not design the target. Resolve blocking `UNKNOWN` facts. If a proposed target begins with current layers, return here.
+
+## 4. Apply the element-necessity test
+
+Existing elements have **no presumption of survival**. Test whether the *target operation* needs their responsibility, not whether a current wrapper performs useful work. If the work moves into a target pass/store, REMOVE or MERGE the wrapper and preserve the required behavior there.
 
 Every element on the current process/data map must have a concrete reason to exist.
 
@@ -76,13 +91,13 @@ UNKNOWN    required consumer/semantic fact is not yet established
 
 Absence of evidence is not evidence of no consumer. For `UNKNOWN`, inspect callers, persistence and lifetime before removal. `DERIVE` requires exact inputs and their lifetime; `FLATTEN` requires preserved identity and mutation semantics. These are candidates until their correctness and applicable cost gates pass.
 
-For a full redesign, first extract responsibilities here; finalize KEEP/replace decisions only against the target in step 4. A current internal caller proves use, not necessity of the representation. Preserve required computations/checks and adapt internal callers to the target.
+For a full redesign, first extract responsibilities here; finalize KEEP/replace decisions only against the target in step 5. A current internal caller proves use, not necessity of the representation. Preserve required computations/checks and adapt internal callers to the target.
 
 Do not require documentation for elements already obvious from the code and contract. Record only decisions that affect the design.
 
-## 4. Design the replacement from the contract
+## 5. Design the replacement from the contract
 
-For object-based code, use [OOP → DOD/PWP](engineering/10-oop-to-dod.md). Derive target operations/data from behavior before mapping old responsibilities onto them. Existing services do not prescribe the target.
+Use the physical data path from step 3 to derive explicit passes/owned stores; only now name target types and modules. For object-based code, apply [OOP → DOD/PWP](engineering/10-oop-to-dod.md).
 
 For a cost claim, establish baseline and cause through [Diagnosis](performance/00-diagnosis.md). Without measurements, a concrete proposal remains `UNVERIFIED`.
 
@@ -92,7 +107,7 @@ Name types, reads/writes, owners and lifetimes. Mark old elements removed, merge
 
 Refine with selected DOD rules. Every new element also needs the necessity test.
 
-## 5. Compare current and candidate
+## 6. Compare current and candidate
 
 Compare only metrics relevant to the task.
 
@@ -104,7 +119,7 @@ Reject contract/guardrail violations. Compare the target and lifetime costs; mea
 
 Do not prefer a design merely because it changes fewer lines.
 
-## 6. Implement one structural decision at a time
+## 7. Implement one structural decision at a time
 
 Implement one justified candidate first: the measured cause selected by the profiler route, or the structural removal whose consumers and replacement are established. Resolve required dependencies first. Implementation may be an experiment; adoption waits for verification.
 
@@ -119,7 +134,7 @@ During implementation:
 
 If implementation exposes a wrong assumption in the candidate map, update the map and design before continuing.
 
-## 7. Verify proportionally
+## 8. Verify proportionally
 
 Always verify affected behavior.
 
