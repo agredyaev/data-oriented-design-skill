@@ -255,10 +255,27 @@ class ValidateSkillTests(unittest.TestCase):
         path = self.skill / 'references/engineering/10-simd-and-dense-processing.md'
         text = path.read_text()
         path.write_text(text.replace(
-            '## Decision tree: gather/scatter or change the data flow',
+            '## Decision tree: gather/scatter or change data flow',
             '## Gather/scatter notes',
         ))
         self.assert_invalid('General SIMD block requires five executable decision trees')
+
+
+    def test_data_shape_stays_router(self):
+        path = self.skill / 'references/engineering/01-data-shape.md'
+        text = path.read_text()
+        path.write_text(text.replace('# Data Shape Router', '# Data Shape and Computation'))
+        self.assert_invalid('Data shape must remain a routing block')
+
+    def test_pwp_does_not_own_store_derive(self):
+        self.append('references/engineering/compiler/profile/50-pwp-retained-state.md',
+                    '## Decision tree: store or derive a field')
+        self.assert_invalid('PWP retained state must delegate store-vs-derive')
+
+    def test_simd_does_not_own_layout(self):
+        self.append('references/engineering/10-simd-and-dense-processing.md',
+                    'AoS and SoA are BOTH candidates')
+        self.assert_invalid('General SIMD must consume identity/layout decisions')
 
 if __name__ == '__main__':
     unittest.main()
