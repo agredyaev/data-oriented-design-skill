@@ -82,7 +82,7 @@ fn update(rt: &mut Runtime, id: ModelId) {
 }
 ```
 
-Keep a lock when independent threads truly mutate the same contractual resource.
+Focused work may keep a lock when independent threads truly mutate the same contractual resource. Broad redesign re-derives the synchronization mechanism from the target concurrency model.
 
 ## Pointer-topology handoff
 
@@ -104,7 +104,7 @@ struct NativeCancellation {
 }
 ```
 
-Keep this when the native API requires a cloneable cross-thread handle. Do not rewrite it merely to satisfy a pointer-free aesthetic.
+Focused work may keep this when the native API requires a cloneable cross-thread handle. Broad redesign preserves the foreign handle contract and re-derives the surrounding ownership; do not rewrite the foreign contract merely for pointer-free aesthetics.
 
 ## Guardrails
 

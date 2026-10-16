@@ -152,7 +152,7 @@ Candidate inside one process with no real boundary:
 let value = project_required_fields(domain)?;
 ```
 
-Keep a conversion only when a real boundary or invariant requires it.
+Focused work may keep a conversion when a real boundary or invariant requires it. Broad redesign preserves that requirement and re-derives the minimal boundary representation.
 
 ## Guardrails
 

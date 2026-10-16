@@ -437,7 +437,7 @@ After a 512 change, verify parity, measure the predicted local metric, then reme
 Return `NOT DONE` when any applicable item fails:
 
 - target passes/storage are still organized around old classes without access justification;
-- a surviving/new abstraction lacks a named current responsibility;
+- a non-default target mechanism lacks a named target requirement and burden-of-proof result;
 - duplicate old/new canonical state remains;
 - an internal migration adapter/shadow production path remains;
 - build-only state survives without a runtime consumer;
@@ -455,7 +455,7 @@ Report only:
 
 1. **Current** — typed pipeline, retained-state/mechanism inventory, measured costs if available.
 2. **Target** — exact passes, access matrix, flat state, unavoidable boundaries.
-3. **Delete / Keep** — obsolete mechanisms; retained abstractions with one-line responsibility.
+3. **Delete / Target exceptions** — obsolete mechanisms; only newly re-derived non-default target mechanisms with the requirement that forced them.
 4. **Implementation delta** — direct slices/tests; no shadow architecture.
 5. **Performance** — baseline/profile, causal changes, matched results; 512 decision when applicable.
 6. **Unknowns** — only facts blocking a decision.

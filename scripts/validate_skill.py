@@ -306,6 +306,12 @@ def validate(repo):
             errors.append('Broad classifier must include S11 closed-world dispatch')
         if 'engineering/11-pipeline-materialization.md' not in broad_text:
             errors.append('Broad redesign must route pipeline materialization signatures')
+        for forbidden in (
+            '**Delete / Keep**',
+            'surviving/new abstraction lacks a named current responsibility',
+        ):
+            if forbidden in broad_text:
+                errors.append(f'Broad redesign contains stale preservation wording: {forbidden}')
         if 'engineering/compiler/profile/50-pwp-retained-state.md' not in broad_text:
             errors.append('Broad redesign must integrate the PWP retained-state gate')
         if 'engineering/compiler/25-pwp-512-profile.md' not in broad_text:
@@ -398,6 +404,19 @@ def validate(repo):
             errors.append(f'Focused mechanism block missing broad-redesign override: {relative}')
         if 're-derive' not in scoped:
             errors.append(f'Focused mechanism block must re-derive broad target mechanism: {relative}')
+
+    ownership_text = documents.get(root / 'references/engineering/04-ownership-and-concurrency.md', '')
+    for required in (
+        'Focused work may keep a lock',
+        'Broad redesign re-derives the synchronization mechanism',
+        'Broad redesign preserves the foreign handle contract and re-derives the surrounding ownership',
+    ):
+        if required not in ownership_text:
+            errors.append(f'Ownership block missing focused/broad scope rule: {required}')
+
+    yagni_text = documents.get(root / 'references/engineering/05-yagni-and-cleanup.md', '')
+    if 'Broad redesign preserves that requirement and re-derives the minimal boundary representation.' not in yagni_text:
+        errors.append('YAGNI conversion guidance must distinguish focused keep from broad re-derivation')
 
     structural_text = documents.get(root / 'references/engineering/00-structural-analysis.md', '')
     for invariant in (

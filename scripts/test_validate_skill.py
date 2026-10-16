@@ -390,5 +390,33 @@ class ValidateSkillTests(unittest.TestCase):
         ))
         self.assert_invalid('Application reconstruction missing invariant')
 
+
+    def test_broad_report_cannot_reintroduce_keep_semantics(self):
+        path = self.skill / 'references/broad-redesign.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            '**Delete / Target exceptions**',
+            '**Delete / Keep**',
+        ))
+        self.assert_invalid('Broad redesign contains stale preservation wording')
+
+    def test_ownership_lock_guidance_must_scope_broad_rederivation(self):
+        path = self.skill / 'references/engineering/04-ownership-and-concurrency.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Broad redesign re-derives the synchronization mechanism from the target concurrency model.',
+            'Broad redesign keeps the existing lock.',
+        ))
+        self.assert_invalid('Ownership block missing focused/broad scope rule')
+
+    def test_yagni_conversion_cannot_preserve_old_mechanism_in_broad(self):
+        path = self.skill / 'references/engineering/05-yagni-and-cleanup.md'
+        text = path.read_text()
+        path.write_text(text.replace(
+            'Broad redesign preserves that requirement and re-derives the minimal boundary representation.',
+            'Broad redesign keeps the conversion.',
+        ))
+        self.assert_invalid('YAGNI conversion guidance must distinguish focused keep from broad re-derivation')
+
 if __name__ == '__main__':
     unittest.main()
